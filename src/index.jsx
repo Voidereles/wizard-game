@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import Experience from "./Experience.jsx";
 import { KeyboardControls } from "@react-three/drei";
 import { StrictMode } from "react";
+import { PCFSoftShadowMap, VSMShadowMap } from "three";
 
 const root = ReactDOM.createRoot(document.querySelector("#root"));
 
@@ -20,6 +21,7 @@ root.render(
     >
       <Canvas
         shadows
+        shadowmap={{ type: VSMShadowMap }}
         camera={{
           fov: 45,
           near: 0.1,

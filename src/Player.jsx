@@ -78,11 +78,11 @@ export default function Player() {
     const cameraPosition = new THREE.Vector3();
     cameraPosition.copy(bodyPosition);
     cameraPosition.z += 4.25;
-    cameraPosition.y += 1.85;
+    cameraPosition.y += 1.5;
 
     const cameraTarget = new THREE.Vector3();
     cameraTarget.copy(bodyPosition);
-    cameraTarget.y -= 0.25;
+    cameraTarget.y -= -0.2;
 
     smoothedCameraPosition.lerp(cameraPosition, 5 * delta); // delta is for different framerates of monitors
     smoothedCameraTarget.lerp(cameraTarget, 5 * delta);
