@@ -10,7 +10,6 @@ export default function Player() {
   const { rapier, world: rapierWorld } = useRapier();
 
   const [smoothedCameraPosition] = useState(() => new THREE.Vector3(10, 10, 10));
-  console.log(smoothedCameraPosition);
   const [smoothedCameraTarget] = useState(() => new THREE.Vector3());
 
   const jump = () => {
@@ -78,12 +77,12 @@ export default function Player() {
     const bodyPosition = body.current.translation();
     const cameraPosition = new THREE.Vector3();
     cameraPosition.copy(bodyPosition);
-    cameraPosition.z += 3.25;
-    cameraPosition.y += 1.95;
+    cameraPosition.z += 4.25;
+    cameraPosition.y += 1.85;
 
     const cameraTarget = new THREE.Vector3();
     cameraTarget.copy(bodyPosition);
-    cameraTarget.y += 0.25;
+    cameraTarget.y -= 0.25;
 
     smoothedCameraPosition.lerp(cameraPosition, 5 * delta); // delta is for different framerates of monitors
     smoothedCameraTarget.lerp(cameraTarget, 5 * delta);
@@ -101,7 +100,7 @@ export default function Player() {
       colliders="ball"
       restitution={0.2}
       friction={1}
-      position={[0, 1, 0]}
+      position={[0, 1, -2]}
     >
       <mesh castShadow>
         <icosahedronGeometry args={[0.3, 1]} />
