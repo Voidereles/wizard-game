@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { useMemo, useState, useRef, Suspense } from "react";
+import { useMemo, useState, useRef, useEffect, Suspense } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { useGLTF, useTexture } from "@react-three/drei";
 import { useControls } from "leva";
 import { ExtrudeGeometry } from "three";
 
 THREE.ColorManagement.legacyMode = false;
+THREE.ColorManagement.enabled = true;
 
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 const cylinderGeometry5 = new THREE.CylinderGeometry(5, 5, 1, 5, 1);
@@ -18,37 +19,13 @@ const obstacleMaterial = new THREE.MeshStandardMaterial({ color: "orangered" });
 const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x333339 });
 const wallTilesMaterial = new THREE.MeshStandardMaterial({ color: 0x393939 });
 
+const blackMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x191f22 });
+const woodMaterial = new THREE.MeshStandardMaterial({ color: 0xa1662f });
+const darkWoodMaterial = new THREE.MeshStandardMaterial({ color: 0x502900 });
+
+const firePlaceMaterial = new THREE.MeshStandardMaterial({ color: 0x270a08 });
+
 export function Bounds({ length = 1 }) {
-  // const [wallTexture, displacementMap, normalMap, ambientOcclusionMap] = useTexture([
-  //   "./materials/walls.jpg",
-  //   "./materials/walls-displacement.png",
-  //   "./materials/walls-normal.png",
-  //   "./materials/walls-ambientOcclusion.png",
-  // ]);
-
-  // // Adjust texture wrapping for all maps
-  // wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
-  // displacementMap.wrapS = displacementMap.wrapT = THREE.RepeatWrapping;
-  // normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
-  // ambientOcclusionMap.wrapS = ambientOcclusionMap.wrapT = THREE.RepeatWrapping;
-
-  // // Set texture repeat for all maps
-  // const repeatX = 170;
-  // const repeatY = 2.5;
-  // wallTexture.repeat.set(repeatX, repeatY);
-  // displacementMap.repeat.set(repeatX, repeatY);
-  // normalMap.repeat.set(repeatX, repeatY);
-  // ambientOcclusionMap.repeat.set(repeatX, repeatY);
-
-  // const wallsMaterial = new THREE.MeshStandardMaterial({
-  //   map: wallTexture,
-  //   aoMap: ambientOcclusionMap,
-  //   displacementMap: displacementMap,
-  //   displacementScale: 0,
-  //   color: "rgb(100, 100, 100)",
-  //   // normalMap: normalMap,
-  // });
-
   return (
     <>
       {
@@ -62,6 +39,13 @@ export function Bounds({ length = 1 }) {
             receiveShadow
           ></mesh>
 
+          <mesh
+            position={[-2.15, 1.4 + 3, -(length * 2) + 2]}
+            geometry={boxGeometry}
+            material={wallMaterial}
+            scale={[0.3, 3.2, 4 * length]}
+          ></mesh>
+
           {/* wall right */}
           <mesh
             position={[2.15, 1.4, -(length * 2) + 2]}
@@ -69,6 +53,13 @@ export function Bounds({ length = 1 }) {
             material={wallMaterial}
             scale={[0.3, 3.2, 4 * length]}
             receiveShadow
+          ></mesh>
+
+          <mesh
+            position={[2.15, 1.4 + 3, -(length * 2) + 2]}
+            geometry={boxGeometry}
+            material={wallMaterial}
+            scale={[0.3, 3.2, 4 * length]}
           ></mesh>
 
           {/* bottom left */}
@@ -92,12 +83,21 @@ export function Bounds({ length = 1 }) {
           ></mesh>
 
           <mesh
-            position={[0, 0.55, -(length * 3.45) - 2]}
+            position={[0, 6.05, -(length * 2) + 3]}
+            geometry={boxGeometry}
+            material={wallMaterial}
+            scale={[4, 0.2, 4 * length]}
+            receiveShadow
+            castShadow
+          ></mesh>
+
+          {/* <mesh
+            position={[0, 0.55, - ]}
             geometry={boxGeometry}
             material={wallMaterial}
             scale={[4.6, 1.5, 0.3]}
             receiveShadow
-          ></mesh>
+          ></mesh> */}
           <CuboidCollider args={[2, 0.1, 2 * length]} position={[0, -0.1, -(length * 2) + 2]} />
         </RigidBody>
       }
@@ -172,7 +172,6 @@ export function TileBottomGroup({ position = [0, 0, 0] }) {
         .map((_, index) => {
           const positionBox = getRandomNonOverlappingPosition(_, index, "box");
           const positionCylinder = getRandomNonOverlappingPosition(_, index, "cylinder");
-          console.log(positionCylinder);
 
           return (
             <group key={`tileGroup-${index}`}>
@@ -201,19 +200,61 @@ export function TileBottomGroup({ position = [0, 0, 0] }) {
   );
 }
 
-export function PillarGroup({ position = [0, 0, 0] }) {
+export function TorchesGroup({ position = [-1.5, 1, 2], rotation }) {
+  const { nodes } = useGLTF("/torch.glb");
+  return (
+    <group position={position} dispose={null}>
+      <group scale={[0.6, 0.6, 0.6]} rotation={rotation}>
+        <mesh
+          castShadow
+          receiveShadow
+          geometry={nodes.WoodPart.geometry}
+          material={darkWoodMaterial}
+          position={[-0.002, 0.73, 0.001]}
+        />
+        <mesh
+          castShadow
+          receiveShadow
+          geometry={nodes.MetalPart.geometry}
+          material={blackMetalMaterial}
+          position={[-0.039, 0.817, 0]}
+        />
+        <mesh
+          castShadow
+          receiveShadow
+          geometry={nodes.FirePlace.geometry}
+          material={firePlaceMaterial}
+          position={[0, 1.187, 0]}
+        />
+      </group>
+      <group position={[0, 0.67, 0]}>
+        {Array.from({ length: 12 }).map((_, index) => (
+          <FlameBox
+            key={index}
+            position={[(Math.random() - 0.5) * 0.2, 0.1, (Math.random() - 0.5) * 0.2]}
+            delay={Math.random() * 15000} // Adjust the delay as needed
+          />
+        ))}
+      </group>
+    </group>
+  );
+}
+
+useGLTF.preload("/torch.glb");
+
+export function PillarGroup({ position = [0, 0, 0], shadowToggle = true }) {
   const { nodes } = useGLTF("/pillar-empty.glb");
 
   return (
     <group dispose={null} position={position}>
       <RigidBody type="fixed" colliders="hull" position={[-1.8, 0.17, -2]} restitution={0.2} friction={0}>
         <mesh
-          castShadow
-          receiveShadow
           geometry={boxGeometry}
           material={wallTilesMaterial}
           scale={[0.45, -0.15, 0.6]}
           position={[0, 2.76, 0]}
+          castShadow={shadowToggle}
+          receiveShadow={shadowToggle}
         />
         <mesh
           castShadow
@@ -222,6 +263,8 @@ export function PillarGroup({ position = [0, 0, 0] }) {
           material={wallTilesMaterial}
           scale={[0.5, 0.35, 0.6]}
           position={[0, 0.03, 0]}
+          castShadow={shadowToggle}
+          receiveShadow={shadowToggle}
         />
         <mesh
           castShadow
@@ -229,6 +272,8 @@ export function PillarGroup({ position = [0, 0, 0] }) {
           geometry={nodes.Cube.geometry}
           material={wallTilesMaterial}
           scale={[0.25, 0.14, 0.25]}
+          castShadow={shadowToggle}
+          receiveShadow={shadowToggle}
         />
       </RigidBody>
       <RigidBody
@@ -238,29 +283,31 @@ export function PillarGroup({ position = [0, 0, 0] }) {
         rotation={[0, Math.PI, 0]}
         restitution={0.2}
         friction={0}
+        castShadow={shadowToggle}
+        receiveShadow={shadowToggle}
       >
         <mesh
-          castShadow
-          receiveShadow
           geometry={boxGeometry}
           material={wallTilesMaterial}
           scale={[0.45, -0.15, 0.6]}
           position={[0, 2.76, 0]}
+          castShadow={shadowToggle}
+          receiveShadow={shadowToggle}
         />
         <mesh
-          castShadow
-          receiveShadow
           geometry={boxGeometry}
           material={wallTilesMaterial}
           scale={[0.5, 0.35, 0.6]}
           position={[0, 0.03, 0]}
+          castShadow={shadowToggle}
+          receiveShadow={shadowToggle}
         />
         <mesh
-          castShadow
-          receiveShadow
           geometry={nodes.Cube.geometry}
           material={wallTilesMaterial}
           scale={[0.25, 0.14, 0.25]}
+          castShadow={shadowToggle}
+          receiveShadow={shadowToggle}
         />
       </RigidBody>
     </group>
@@ -326,6 +373,48 @@ export function WallTileGroup({ position = [0, 0, 0] }) {
     </group>
   );
 }
+
+const FlameBox = ({ position, delay }) => {
+  const [scale, setScale] = useState([1, 1, 1]);
+  const [currentPosition, setCurrentPosition] = useState(position);
+
+  useFrame(() => {
+    setScale((prevScale) => [
+      prevScale[0] * 0.95, // Increase the scale factor for faster shrinking
+      prevScale[1] * 0.95,
+      prevScale[2] * 0.95,
+    ]);
+
+    // Move upward while getting smaller
+    setCurrentPosition((prevPosition) => [
+      prevPosition[0] * 0.97,
+      prevPosition[1] + 0.006, // Adjust the speed of upward movement
+      prevPosition[2] * 0.97,
+    ]);
+
+    // If the flame box is too small, reset the scale and position
+    if (scale[0] < 0.05) {
+      setScale([0.4, 0.4, 0.4]);
+      setCurrentPosition(position);
+    }
+  });
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setScale([0.4, 0.4, 0.4]);
+      setCurrentPosition(position);
+    }, delay);
+
+    return () => clearTimeout(timeoutId);
+  }, [delay, position]);
+
+  return (
+    <mesh position={currentPosition} scale={scale}>
+      <boxGeometry args={[0.2, 0.2, 0.2]} />
+      <meshStandardMaterial color={[Math.random() + 0.8, Math.random() * 0.3, 0]} transparent opacity={1} />
+    </mesh>
+  );
+};
 
 const generateRandomShapeGeometry = () => {
   const numVertices = Math.floor(Math.random() * (8 - 5 + 1)) + 5;
@@ -449,7 +538,7 @@ export function BlockEnd({ position = [0, 0, 0] }) {
   );
 }
 
-export function Level({ count = 100, types = [BlockSpinner, BlockAxe, BlockLimbo] }) {
+export function Level({ count = 10, types = [BlockSpinner, BlockAxe, BlockLimbo] }) {
   const blocks = useMemo(() => {
     const blocks = [];
 
@@ -467,12 +556,18 @@ export function Level({ count = 100, types = [BlockSpinner, BlockAxe, BlockLimbo
         {/* <RandomShape /> */}
         <WallTileGroup position={[0, 0, 0]} />
         <PillarGroup />
+        {/* <Torch position={[-1, 0, -2]} /> */}
+        {/* <Torch position={[-1, 0, -2]} />
+        <Torch /> */}
         {blocks.map((Block, index) => (
           <group key={index}>
             <Block position={[0, 0, -(index + 1) * 4]} />
             <TileBottomGroup position={[0, 0, -(index + 1) * 4]} tileIndex={index} />
             <WallTileGroup position={[0, 0, -(index + 1) * 4]} />
             {index % 2 === 1 && <PillarGroup position={[0, 0, -(index + 1) * 4]} />}
+            {index % 2 === 1 && <PillarGroup position={[0, 3, -(index + 1) * 4]} shadowToggle={false} />}
+            {index % 6 === 0 && <TorchesGroup position={[-1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, 0, 0]} />}
+            {index % 6 === 0 && <TorchesGroup position={[1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, Math.PI, 0]} />}
           </group>
         ))}
 

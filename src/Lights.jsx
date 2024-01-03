@@ -1,16 +1,16 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useControls } from "leva";
-import { SpotLightHelper } from "three";
-import { useHelper } from "@react-three/drei";
+// import { SpotLightHelper } from "three";
+// import { useHelper } from "@react-three/drei";
 
 export default function Lights() {
   const light = useRef();
-  useHelper(light, SpotLightHelper, "cyan");
+  // useHelper(light, SpotLightHelper, "cyan");
   const warmLightColor = "#FFD2AD";
 
   useFrame((state) => {
-    light.current.position.z = state.camera.position.z;
+    light.current.position.z = state.camera.position.z + 1;
     light.current.target.position.z = state.camera.position.z - 5;
     light.current.target.updateMatrixWorld(); // without it, target of the light source will still be on same point, not being updated
   });
@@ -41,11 +41,11 @@ export default function Lights() {
         // for
         // useControls
         // helper
-        position={[0, 3, 4.5]}
-        intensity={200.5}
+        position={[0, 3, 5.5]}
+        intensity={400.5}
         color={warmLightColor}
-        decay={1.6}
-        angle={Math.PI / 3.7}
+        // decay={1.6}
+        // angle={Math.PI / 3.7}
         shadow-mapSize={[1024, 1024]}
         shadow-camera-near={1}
         shadow-camera-far={40}

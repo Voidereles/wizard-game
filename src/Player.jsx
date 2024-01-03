@@ -19,7 +19,7 @@ export default function Player() {
     const ray = new rapier.Ray(origin, direction);
     const hit = rapierWorld.castRay(ray, 10, true);
     if (hit.toi < 0.15) {
-      body.current.applyImpulse({ x: 0, y: 0.5, z: 0 });
+      body.current.applyImpulse({ x: 0, y: 0.4, z: 0 });
     }
   };
 
@@ -100,7 +100,7 @@ export default function Player() {
       colliders="ball"
       restitution={0.2}
       friction={1}
-      position={[0, 1, -2]}
+      position={[0, 3, -2]}
     >
       <mesh castShadow>
         <icosahedronGeometry args={[0.3, 1]} />
