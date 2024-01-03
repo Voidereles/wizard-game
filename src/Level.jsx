@@ -219,13 +219,7 @@ export function TorchesGroup({ position = [-1.5, 1, 2], rotation }) {
           material={blackMetalMaterial}
           position={[-0.039, 0.817, 0]}
         />
-        <mesh
-          castShadow
-          receiveShadow
-          geometry={nodes.FirePlace.geometry}
-          material={firePlaceMaterial}
-          position={[0, 1.187, 0]}
-        />
+        <mesh geometry={nodes.FirePlace.geometry} material={firePlaceMaterial} position={[0, 1.187, 0]} />
       </group>
       <group position={[0, 0.67, 0]}>
         {Array.from({ length: 12 }).map((_, index) => (
@@ -257,8 +251,6 @@ export function PillarGroup({ position = [0, 0, 0], shadowToggle = true }) {
           receiveShadow={shadowToggle}
         />
         <mesh
-          castShadow
-          receiveShadow
           geometry={boxGeometry}
           material={wallTilesMaterial}
           scale={[0.5, 0.35, 0.6]}
@@ -267,8 +259,6 @@ export function PillarGroup({ position = [0, 0, 0], shadowToggle = true }) {
           receiveShadow={shadowToggle}
         />
         <mesh
-          castShadow
-          receiveShadow
           geometry={nodes.Cube.geometry}
           material={wallTilesMaterial}
           scale={[0.25, 0.14, 0.25]}
