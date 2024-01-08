@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useControls } from "leva";
+// import { useControls } from "leva";
 // import { SpotLightHelper } from "three";
 // import { useHelper } from "@react-three/drei";
 
@@ -15,37 +15,14 @@ export default function Lights() {
     light.current.target.updateMatrixWorld(); // without it, target of the light source will still be on same point, not being updated
   });
 
-  // const { position } = useControls({
-  //   position: {
-  //     value: { x: 0, y: 5, z: 1 },
-  //     step: 0.5,
-  //   },
-  // });
-  // const positionP = useControls({
-  //   position: {
-  //     value: { x: 0, y: 2.66, z: 0 },
-  //     step: 0.05,
-  //   },
-  //   scale: {
-  //     value: { x: 0.5, y: 0.35, z: 0.6 },
-  //     step: 0.05,
-  //   },
-  // });
-
   return (
     <>
       <spotLight
         ref={light}
         castShadow
-        // position={[position.x, position.y, position.z]}
-        // for
-        // useControls
-        // helper
         position={[0, 3, 5.5]}
         intensity={400.5}
         color={warmLightColor}
-        // decay={1.6}
-        // angle={Math.PI / 3.7}
         shadow-mapSize={[1024, 1024]}
         shadow-camera-near={1}
         shadow-camera-far={40}
@@ -58,3 +35,20 @@ export default function Lights() {
     </>
   );
 }
+
+// const { position } = useControls({
+//   position: {
+//     value: { x: 0, y: 5, z: 1 },
+//     step: 0.5,
+//   },
+// });
+// const positionP = useControls({
+//   position: {
+//     value: { x: 0, y: 2.66, z: 0 },
+//     step: 0.05,
+//   },
+//   scale: {
+//     value: { x: 0.5, y: 0.35, z: 0.6 },
+//     step: 0.05,
+//   },
+// });

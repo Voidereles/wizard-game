@@ -19,7 +19,7 @@ export default function Player() {
     const ray = new rapier.Ray(origin, direction);
     const hit = rapierWorld.castRay(ray, 10, true);
     if (hit.toi < 0.15) {
-      body.current.applyImpulse({ x: 0, y: 0.4, z: 0 });
+      body.current.applyImpulse({ x: 0, y: 0.8, z: 0 });
     }
   };
 
@@ -78,11 +78,11 @@ export default function Player() {
     const cameraPosition = new THREE.Vector3();
     cameraPosition.copy(bodyPosition);
     cameraPosition.z += 4.25;
-    cameraPosition.y += 1.5;
+    cameraPosition.y += 2;
 
     const cameraTarget = new THREE.Vector3();
     cameraTarget.copy(bodyPosition);
-    cameraTarget.y -= -0.2;
+    cameraTarget.y -= -0.1;
 
     smoothedCameraPosition.lerp(cameraPosition, 5 * delta); // delta is for different framerates of monitors
     smoothedCameraTarget.lerp(cameraTarget, 5 * delta);
