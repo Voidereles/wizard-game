@@ -2,17 +2,19 @@ import * as THREE from "three";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { useMemo, useState, useRef, useEffect, Suspense } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
+import { useGLTF, useTexture } from "@react-three/drei";
 import { useControls } from "leva";
 import { ExtrudeGeometry } from "three";
+import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 THREE.ColorManagement.legacyMode = false;
 THREE.ColorManagement.enabled = true;
 
+const planeGeometry = new THREE.PlaneGeometry(3, 2);
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 const cylinderGeometry5 = new THREE.CylinderGeometry(5, 5, 1, 5, 1);
 const cylinderGeometry7 = new THREE.CylinderGeometry(5, 5, 1, 7, 1);
-const coneGeometry = new THREE.ConeGeometry(2, 15, 5, 1, true);
+const coneGeometry = new THREE.ConeGeometry(2, 15, 3, 1);
 
 const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
 const tilesMaterial = new THREE.MeshStandardMaterial({ color: 0x151515 });
@@ -27,6 +29,22 @@ const woodMaterial = new THREE.MeshStandardMaterial({ color: 0xa1662f, metalness
 const darkWoodMaterial = new THREE.MeshStandardMaterial({ color: 0x502900 });
 
 const firePlaceMaterial = new THREE.MeshStandardMaterial({ color: 0x270a08 });
+
+const textureLoader = new THREE.TextureLoader();
+const simpleShadow = textureLoader.load("./simpleShadow2.jpg");
+
+const fireShadowMaterial = new THREE.MeshBasicMaterial({
+  color: 0xff8833,
+  transparent: true,
+  alphaMap: simpleShadow,
+  // blending: THREE.AdditiveBlending,
+  side: THREE.DoubleSide,
+});
+
+const degrees45 = Math.PI / 4;
+const degrees60 = Math.PI / 3;
+const degrees90 = Math.PI / 2;
+const degrees180 = Math.PI;
 
 function getRandomSign() {
   return Math.random() < 0.5 ? 1 : -1;
@@ -131,10 +149,8 @@ const generateRandomRotation = () => [
   (Math.random() - 0.5) * 0.15,
   (Math.random() - 0.5) * 0.15,
 ];
-
 const FlameBox = ({ position, delay }) => {
   const materialColor = useMemo(() => [Math.random() + 0.8, Math.random() * 0.3, 0], []);
-
   const [scale, setScale] = useState([1, 1, 1]);
   const [currentPosition, setCurrentPosition] = useState(position);
 
@@ -169,10 +185,12 @@ const FlameBox = ({ position, delay }) => {
   }, [delay, position]);
 
   return (
-    <mesh position={currentPosition} scale={scale}>
-      <boxGeometry args={[0.2, 0.2, 0.2]} />
-      <meshStandardMaterial color={materialColor} transparent opacity={1} />
-    </mesh>
+    <group>
+      <mesh position={currentPosition} scale={scale}>
+        <boxGeometry args={[0.2, 0.2, 0.2]} />
+        <meshStandardMaterial color={materialColor} transparent opacity={1} />
+      </mesh>
+    </group>
   );
 };
 
@@ -253,6 +271,16 @@ export function TileBottomGroup({ position = [0, 0, 0] }) {
 
 export function TorchesGroup({ position = [-1.5, 1, 2], rotation }) {
   const { nodes } = useGLTF("/torch.glb");
+
+  const isRightTorch = rotation[1] === degrees180;
+  const rightBloomRotationY = degrees60 * 2;
+  const leftBloomRotationY = degrees60;
+
+  const angledBloomRotation = [0, isRightTorch ? rightBloomRotationY : leftBloomRotationY, 0];
+  const angledBloomPosition = [0.05, 1.65, isRightTorch ? -0.5 : 0.5];
+
+  const wallBloomPosition = [-0.3, 1.6, -0.5];
+
   return (
     <group position={position} dispose={null}>
       <group scale={[0.6, 0.6, 0.6]} rotation={rotation}>
@@ -272,7 +300,22 @@ export function TorchesGroup({ position = [-1.5, 1, 2], rotation }) {
           material={blackMetalMaterial}
           position={[-0.039, 0.817, 0]}
         />
+        <mesh
+          geometry={planeGeometry}
+          material={fireShadowMaterial}
+          position={wallBloomPosition}
+          rotation={[0, degrees90, 0]}
+          scale={[1, 1, 1.5]}
+        />
         <mesh geometry={nodes.FirePlace.geometry} material={firePlaceMaterial} position={[0, 1.187, 0]} />
+
+        <mesh
+          geometry={planeGeometry}
+          material={fireShadowMaterial}
+          position={angledBloomPosition}
+          scale={[0.5, 1.5, 0.5]}
+          rotation={angledBloomRotation}
+        />
       </group>
       <group position={[0, 0.67, 0]}>
         {Array.from({ length: 12 }).map((_, index) => (
@@ -323,7 +366,7 @@ export function PillarGroup({ position = [0, 0, 0], shadowToggle = true }) {
         type="fixed"
         colliders="hull"
         position={[1.8, 0.17, -2]}
-        rotation={[0, Math.PI, 0]}
+        rotation={[0, degrees180, 0]}
         restitution={0.2}
         friction={0}
         castShadow={shadowToggle}
@@ -358,18 +401,25 @@ export function PillarGroup({ position = [0, 0, 0], shadowToggle = true }) {
 }
 
 export function WallTileGroup({ position = [0, 0, 0] }) {
-  const amountOfTiles = useMemo(() => Math.floor(Math.random() * (20 - 10 + 1)) + 10, []);
-  const tileSize = { x: 0.1, y: 0.25, z: 0.5 };
+  const maximumAmount = 36 * 1.5;
+  const minimumAmount = 20 * 1.5;
+  const amountOfTiles = useMemo(
+    () => Math.floor(Math.random() * (maximumAmount - minimumAmount + 1)) + minimumAmount,
+    []
+  );
+  //tiles for 3 blocks
 
   const generateRandomPosition = (occupiedPositions) => {
     let newPosition;
-    const tolerance = 0.5; // Adjust as needed
+    const tolerance = 0.5;
+    const heightPositionOfTilesGroup = -0.5;
+    const RangeInAxisZ = 4.5;
 
     do {
       newPosition = {
         x: Math.random() > 0.5 ? 2.02 : -2.02,
-        y: 0.5 + Math.random() * (2.5 - 0.5),
-        z: Math.random() * 3.5 - 1.75,
+        y: heightPositionOfTilesGroup + Math.random() * (2.5 - 0.5),
+        z: Math.random() * RangeInAxisZ - RangeInAxisZ / 2,
       };
     } while (isOverlap(newPosition, occupiedPositions, tolerance));
 
@@ -391,28 +441,27 @@ export function WallTileGroup({ position = [0, 0, 0] }) {
 
   const initialPositions = [];
 
+  const geometries = [];
+  for (let i = 0; i < amountOfTiles; i++) {
+    const geometry = new THREE.BoxGeometry(0.1, 0.25, 0.5);
+
+    geometry.rotateX(generateRandomRotation()[0]);
+    geometry.rotateY(generateRandomRotation()[0]);
+    geometry.rotateZ(generateRandomRotation()[2]);
+
+    const randomPosition = generateRandomPosition(initialPositions);
+    initialPositions.push(randomPosition);
+
+    geometry.translate(randomPosition.x, randomPosition.y, randomPosition.z);
+    geometries.push(geometry);
+  }
+
+  const tilesMergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
+  console.log(tilesMergedGeometry);
+
   return (
     <group position={position}>
-      {Array(amountOfTiles)
-        .fill()
-        .map((_, index) => {
-          const randomPosition = generateRandomPosition(initialPositions);
-          initialPositions.push(randomPosition);
-          const randomRotation = generateRandomRotation();
-
-          return (
-            <mesh
-              key={index}
-              position={[randomPosition.x, randomPosition.y, randomPosition.z]}
-              rotation={randomRotation}
-              receiveShadow
-              castShadow
-              geometry={boxGeometry}
-              material={wallTilesMaterial}
-              scale={[tileSize.x, tileSize.y, tileSize.z]}
-            />
-          );
-        })}
+      <mesh receiveShadow castShadow geometry={tilesMergedGeometry} material={wallTilesMaterial} />
     </group>
   );
 }
@@ -424,11 +473,11 @@ const generateRandomShapeGeometry = () => {
   const sideLengths = Array.from({ length: numVertices }, () => Math.random() * 0.2 + 0.3);
 
   // Generate random angle for rotation
-  const rotationAngle = (Math.random() * Math.PI) / 2;
+  const rotationAngle = (Math.random() * degrees180) / 2;
 
   // Generate vertices based on desired side lengths
   const vertices = sideLengths.map((sideLength, index) => {
-    const angle = (2 * Math.PI * index) / numVertices + rotationAngle;
+    const angle = (2 * degrees180 * index) / numVertices + rotationAngle;
     return new THREE.Vector3(Math.cos(angle) * sideLength, Math.sin(angle) * sideLength, 0);
   });
 
@@ -451,7 +500,7 @@ export function RandomShape({
       geometry={shapeGeometry}
       scale={[0.05 + Math.random() * 0.1, 0.05 + Math.random() * 0.1, 0.02]}
       position={position}
-      rotation={[Math.PI / 2, 0, 0]}
+      rotation={[degrees90, 0, 0]}
       material={wallMaterial}
       castShadow
     />
@@ -522,7 +571,7 @@ export function BlockWoodSpinner({ position = [0, 0, 0] }) {
           geometry={nodes.woodenBar.geometry}
           material={woodMaterial}
           position={[-0.004, 1.2, -0.012]}
-          rotation={[0, Math.PI / 2, Math.PI]}
+          rotation={[0, degrees90, degrees180]}
           scale={(0.1, 0.1, 0.1)}
         />
         <mesh
@@ -540,12 +589,12 @@ export function BlockWoodSpinner({ position = [0, 0, 0] }) {
 
 export function BlockLimbo({ position = [0, 0, 0] }) {
   const obstacle = useRef();
-  const [timeOffset] = useState(() => Math.random() * 2 * Math.PI); // 2 Math Pi is full 360
+  const [timeOffset] = useState(() => Math.random() * 2 * degrees180);
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
 
-    const y = Math.sin(time + timeOffset) + 1.15;
+    const y = Math.sin(time + timeOffset) + 2.55;
 
     obstacle.current.setNextKinematicTranslation({ x: position[0], y: position[1] + y, z: position[2] });
   });
@@ -553,8 +602,35 @@ export function BlockLimbo({ position = [0, 0, 0] }) {
   return (
     <group position={position}>
       <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow />
-      <RigidBody ref={obstacle} type="kinematicPosition" position={[0, 2, 0]} restitution={0.2} friction={0}>
-        <mesh geometry={boxGeometry} material={obstacleMaterial} scale={[3.5, 0.3, 0.3]} castShadow receiveShadow />
+      <RigidBody
+        colliders={false}
+        ref={obstacle}
+        type="kinematicPosition"
+        position={[0, 5, 0]}
+        restitution={0.2}
+        friction={0}
+      >
+        <mesh
+          geometry={cylinderGeometry5}
+          material={wallMaterial}
+          scale={[0.05, 4, 0.05]}
+          rotation={[0, 0, degrees90]}
+          castShadow
+          receiveShadow
+        />
+        <group position={[0, -0.8, 0]}>
+          {Array.from({ length: 8 }).map((_, index) => (
+            <mesh
+              key={index}
+              geometry={coneGeometry}
+              material={blackMetalMaterial}
+              scale={(0.09, 0.09, 0.09)}
+              position={[index / 1.99 - 1.76, 0, 0]}
+              rotation={[degrees180, degrees90, 0]}
+            />
+          ))}
+        </group>
+        <CuboidCollider args={[2, 0.8, 0.22]} position={[0, -0.6, 0]} />
       </RigidBody>
     </group>
   );
@@ -562,7 +638,7 @@ export function BlockLimbo({ position = [0, 0, 0] }) {
 
 export function BlockAxe({ position = [0, 0, 0] }) {
   const obstacleWhole = useRef();
-  const [timeOffset] = useState(() => Math.random() * 2 * Math.PI); // 2 Math Pi is full 360
+  const [timeOffset] = useState(() => Math.random() * 2 * degrees180);
 
   const { nodes } = useGLTF("/axe2.glb");
 
@@ -571,7 +647,7 @@ export function BlockAxe({ position = [0, 0, 0] }) {
 
     const speedFactor = 3;
 
-    const rotationAngle = (Math.sin(speedFactor * (time + timeOffset)) * Math.PI) / 4.5;
+    const rotationAngle = (Math.sin(speedFactor * (time + timeOffset)) * degrees180) / 4.5;
 
     const rotation = new THREE.Quaternion();
     rotation.setFromEuler(new THREE.Euler(0, 0, rotationAngle));
@@ -626,15 +702,13 @@ export function BlockEnd({ position = [0, 0, 0] }) {
   );
 }
 
-// export function Level({ count = 10, types = [BlockSpinner, BlockAxe, BlockLimbo] }) {
-export function Level({ count = 5, types = [BlockWoodSpinner, BlockAxe] }) {
+export function Level({ count = 10, types = [BlockWoodSpinner, BlockAxe, BlockLimbo] }) {
+  // export function Level({ count = 5, types = [BlockLimbo] }) {
   const blocks = useMemo(() => {
     const blocks = [];
 
     for (let i = 0; i < count; i++) {
       const type = types[Math.floor(Math.random() * types.length)];
-      console.log(type);
-      console.log(types);
       blocks.push(type);
     }
     return blocks;
@@ -645,13 +719,12 @@ export function Level({ count = 5, types = [BlockWoodSpinner, BlockAxe] }) {
     <>
       <Suspense fallback={null}>
         <BlockStart position={[0, 0, 0]} />
-        <RandomShape />
+        {/* <RandomShape /> */}
         <WallTileGroup position={[0, 1, 0]} />
-        <PillarGroup />
-        {/* <Torch position={[-1, 0, -2]} />
-        <Torch position={[-1, 0, -2]} /> */}
-        {/* <Torch /> */}
-        {blocks.map((Block, index) => (
+        {/* <PillarGroup />
+        <PillarGroup position={[0, 3, 0]} shadowToggle={false} /> */}
+
+        {/* {blocks.map((Block, index) => (
           <group key={index}>
             <Block position={[0, 0, -(index + 1) * 4]} />
             <TileBottomGroup position={[0, 0, -(index + 1) * 4]} tileIndex={index} />
@@ -659,13 +732,15 @@ export function Level({ count = 5, types = [BlockWoodSpinner, BlockAxe] }) {
             {index % 2 === 1 && <PillarGroup position={[0, 0, -(index + 1) * 4]} />}
             {index % 2 === 1 && <PillarGroup position={[0, 3, -(index + 1) * 4]} shadowToggle={false} />}
             {index % 5 === 0 && <TorchesGroup position={[-1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, 0, 0]} />}
-            {index % 5 === 0 && <TorchesGroup position={[1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, Math.PI, 0]} />}
+            {index % 5 === 0 && (
+              <TorchesGroup position={[1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, degrees180, 0]} />
+            )}
           </group>
         ))}
 
         <BlockEnd position={[0, 0, -(count + 1) * 4]} />
 
-        <Bounds length={count + 2} />
+        <Bounds length={count + 2} /> */}
       </Suspense>
     </>
   );
