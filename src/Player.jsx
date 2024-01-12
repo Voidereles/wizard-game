@@ -78,11 +78,11 @@ export default function Player() {
     const cameraPosition = new THREE.Vector3();
     cameraPosition.copy(bodyPosition);
     cameraPosition.z += 4.25;
-    cameraPosition.y += 2;
+    cameraPosition.y += 1.8;
 
     const cameraTarget = new THREE.Vector3();
     cameraTarget.copy(bodyPosition);
-    cameraTarget.y -= -0.1;
+    cameraTarget.y -= -0.84;
 
     smoothedCameraPosition.lerp(cameraPosition, 5 * delta); // delta is for different framerates of monitors
     smoothedCameraTarget.lerp(cameraTarget, 5 * delta);
@@ -100,7 +100,7 @@ export default function Player() {
       colliders="ball"
       restitution={0.2}
       friction={1}
-      position={[0, 3, -2]}
+      position={[0, 4, -1]}
     >
       <mesh castShadow>
         <icosahedronGeometry args={[0.3, 1]} />

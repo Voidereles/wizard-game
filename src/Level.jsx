@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CuboidCollider, RigidBody } from "@react-three/rapier";
+import { CuboidCollider, InstancedRigidBodies, RigidBody } from "@react-three/rapier";
 import { useMemo, useState, useRef, useEffect, Suspense } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { useGLTF, useTexture } from "@react-three/drei";
@@ -16,7 +16,7 @@ const cylinderGeometry5 = new THREE.CylinderGeometry(5, 5, 1, 5, 1);
 const cylinderGeometry7 = new THREE.CylinderGeometry(5, 5, 1, 7, 1);
 const coneGeometry = new THREE.ConeGeometry(2, 15, 3, 1);
 
-const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x282222 });
 const tilesMaterial = new THREE.MeshStandardMaterial({ color: 0x151515 });
 const obstacleMaterial = new THREE.MeshStandardMaterial({ color: "orangered" });
 const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x333339 });
@@ -37,7 +37,6 @@ const fireShadowMaterial = new THREE.MeshBasicMaterial({
   color: 0xff8833,
   transparent: true,
   alphaMap: simpleShadow,
-  // blending: THREE.AdditiveBlending,
   side: THREE.DoubleSide,
 });
 
@@ -51,96 +50,30 @@ function getRandomSign() {
 }
 
 export function Bounds({ length = 1 }) {
+  const mergedGeometry = BufferGeometryUtils.mergeGeometries([
+    new THREE.BoxGeometry(0.3, 3.2 + 3, 4 * length).translate(-2.15, 2.9, -(length * 2) + 2),
+    new THREE.BoxGeometry(0.3, 6.2, 4 * length).translate(2.15, 2.9, -(length * 2) + 2),
+    new THREE.BoxGeometry(0.3, 0.2, 4 * length).translate(-2, 0.13, -(length * 2) + 2),
+    new THREE.BoxGeometry(0.3, 0.2, 4 * length).translate(2, 0.13, -(length * 2) + 2),
+    new THREE.BoxGeometry(4, 0.2, 4 * length).translate(0, 6.05, -(length * 2) + 3),
+  ]);
+
   return (
     <>
       {
-        <RigidBody type="fixed" restitution={0.2} friction={0}>
-          {/* wall left */}
+        <RigidBody type="fixed" colliders="trimesh" restitution={0.2} friction={0}>
+          {/* floor */}
           <mesh
-            position={[-2.15, 1.4, -(length * 2) + 2]}
             geometry={boxGeometry}
-            material={wallMaterial}
-            scale={[0.3, 3.2, 4 * length]}
-            receiveShadow
-          ></mesh>
-
-          <mesh
-            position={[-2.15, 1.4 + 3, -(length * 2) + 2]}
-            geometry={boxGeometry}
-            material={wallMaterial}
-            scale={[0.3, 3.2, 4 * length]}
-          ></mesh>
-
-          {/* wall right */}
-          <mesh
-            position={[2.15, 1.4, -(length * 2) + 2]}
-            geometry={boxGeometry}
-            material={wallMaterial}
-            scale={[0.3, 3.2, 4 * length]}
-            receiveShadow
-          ></mesh>
-
-          <mesh
-            position={[2.15, 1.4 + 3, -(length * 2) + 2]}
-            geometry={boxGeometry}
-            material={wallMaterial}
-            scale={[0.3, 3.2, 4 * length]}
-          ></mesh>
-
-          {/* bottom left */}
-          <mesh
-            position={[-2, 0.13, -(length * 2) + 3]}
-            geometry={boxGeometry}
-            material={wallMaterial}
-            scale={[0.3, 0.2, 4 * length]}
-            receiveShadow
-            castShadow
-          ></mesh>
-
-          {/* bottom right */}
-          <mesh
-            position={[2, 0.13, -(length * 2) + 3]}
-            geometry={boxGeometry}
-            material={wallMaterial}
-            scale={[0.3, 0.2, 4 * length]}
-            receiveShadow
-            castShadow
-          ></mesh>
-
-          <mesh
-            position={[0, 6.05, -(length * 2) + 3]}
-            geometry={boxGeometry}
-            material={wallMaterial}
+            material={floorMaterial}
+            position={[0, -0.09, -(length * 2) + 2]}
             scale={[4, 0.2, 4 * length]}
             receiveShadow
-            castShadow
-          ></mesh>
-
-          {/* <mesh
-            position={[0, 0.55, - ]}
-            geometry={boxGeometry}
-            material={wallMaterial}
-            scale={[4.6, 1.5, 0.3]}
-            receiveShadow
-          ></mesh> */}
-          <CuboidCollider args={[2, 0.1, 2 * length]} position={[0, -0.1, -(length * 2) + 2]} />
+          />
+          <mesh geometry={mergedGeometry} material={wallMaterial} receiveShadow castShadow></mesh>;{/* wall left */}
         </RigidBody>
       }
     </>
-  );
-}
-
-export function BlockStart({ position = [0, 0, 0] }) {
-  return (
-    <group position={position}>
-      <mesh
-        geometry={boxGeometry}
-        material={obstacleMaterial}
-        position={[0, -0.1, 0]}
-        scale={[4, 0.2, 4]}
-        receiveShadow
-      />
-    </group>
   );
 }
 
@@ -194,45 +127,15 @@ const FlameBox = ({ position, delay }) => {
   );
 };
 
-export function TileBottomGroup({ position = [0, 0, 0] }) {
+export function FloorTiles({ position = [0, 0, 0] }) {
+  const maximumAmount = 36 * 2;
+  const minimumAmount = 20 * 2;
   const amountOfTiles = useMemo(() => Math.floor(Math.random() * (2 - 2 + 1)) + 2, []);
 
   const tileSize = 0.6;
   const yBase = 0.15;
   const yOffset = 0.001;
   const grid = new Set();
-
-  function getRandomNonOverlappingPosition(_, index, type) {
-    let x, z;
-    do {
-      if (type === "box") {
-        x = (Math.random() - 0.5) * 3; // Random X value between -1.5 and 1.5
-        z = (Math.random() - 0.5) * 3 * 1.2; // Random Z value between -1.8 and 1.8
-      } else {
-        x = Math.random() * 2.4 - 1.2;
-        z = Math.random() * 4 - 2;
-      }
-    } while (isOverlapping(x, z));
-
-    grid.add(`${x},${z}`);
-    let y;
-    type === "box" ? (y = yOffset * index - yBase) : (y = -0.03 + yOffset * index);
-
-    return [x, y, z];
-  }
-
-  function isOverlapping(x, z, tolerance = 0.2) {
-    // Check if the new position is too close to an existing position
-    for (const coords of grid) {
-      const [existingX, existingZ] = coords.split(",").map(Number);
-      const distance = Math.sqrt((existingX - x) ** 2 + (existingZ - z) ** 2);
-
-      if (distance < tileSize - tolerance) {
-        return true; // Overlapping
-      }
-    }
-    return false; // Not overlapping
-  }
 
   return (
     <group position={position}>
@@ -331,139 +234,87 @@ export function TorchesGroup({ position = [-1.5, 1, 2], rotation }) {
 }
 
 useGLTF.preload("/torch.glb");
+useGLTF.preload("/pillar-doubled2.glb");
 
-export function PillarGroup({ position = [0, 0, 0], shadowToggle = true }) {
-  const { nodes } = useGLTF("/pillar-empty.glb");
+export function InstancedPillarGroup({ positionZ = 0, count }) {
+  const { nodes } = useGLTF("/pillar-doubled2.glb");
+  const pillarPairsAmount = count / 2;
+
+  const pillarInstances = useMemo(() => {
+    const instances = [];
+
+    for (let i = 0; i < pillarPairsAmount; i++) {
+      instances.push({
+        key: "pillar-instance-left_" + i,
+        position: [-1.8, 2.6, -(i + 1) * 2 * 4 + 6],
+        rotation: [0, 0, 0],
+        scale: [0.25, 0.14, 0.25],
+      });
+
+      instances.push({
+        key: "pillar-instance-right_" + i,
+        position: [1.8, 2.6, -(i + 1) * 2 * 4 + 6],
+        rotation: [0, degrees180, 0],
+        scale: [0.25, 0.14, 0.25],
+      });
+    }
+
+    return instances;
+  }, []);
+
+  const pillarGeometry = [];
+  pillarGeometry.push(nodes.pillar.geometry, nodes.middleBox.geometry, nodes.bottomBox.geometry);
+
+  const mergedPillarsGeometry = BufferGeometryUtils.mergeGeometries(pillarGeometry);
 
   return (
-    <group dispose={null} position={position}>
-      <RigidBody type="fixed" colliders="hull" position={[-1.8, 0.17, -2]} restitution={0.2} friction={0}>
-        <mesh
-          geometry={boxGeometry}
-          material={wallTilesMaterial}
-          scale={[0.45, -0.15, 0.6]}
-          position={[0, 2.76, 0]}
-          castShadow={shadowToggle}
-          receiveShadow={shadowToggle}
-        />
-        <mesh
-          geometry={boxGeometry}
-          material={wallTilesMaterial}
-          scale={[0.5, 0.35, 0.6]}
-          position={[0, 0.03, 0]}
-          castShadow={shadowToggle}
-          receiveShadow={shadowToggle}
-        />
-        <mesh
-          geometry={nodes.Cube.geometry}
-          material={wallTilesMaterial}
-          scale={[0.25, 0.14, 0.25]}
-          castShadow={shadowToggle}
-          receiveShadow={shadowToggle}
-        />
-      </RigidBody>
-      <RigidBody
-        type="fixed"
-        colliders="hull"
-        position={[1.8, 0.17, -2]}
-        rotation={[0, degrees180, 0]}
-        restitution={0.2}
-        friction={0}
-        castShadow={shadowToggle}
-        receiveShadow={shadowToggle}
-      >
-        <mesh
-          geometry={boxGeometry}
-          material={wallTilesMaterial}
-          scale={[0.45, -0.15, 0.6]}
-          position={[0, 2.76, 0]}
-          castShadow={shadowToggle}
-          receiveShadow={shadowToggle}
-        />
-        <mesh
-          geometry={boxGeometry}
-          material={wallTilesMaterial}
-          scale={[0.5, 0.35, 0.6]}
-          position={[0, 0.03, 0]}
-          castShadow={shadowToggle}
-          receiveShadow={shadowToggle}
-        />
-        <mesh
-          geometry={nodes.Cube.geometry}
-          material={wallTilesMaterial}
-          scale={[0.25, 0.14, 0.25]}
-          castShadow={shadowToggle}
-          receiveShadow={shadowToggle}
-        />
-      </RigidBody>
-    </group>
+    <InstancedRigidBodies type="fixed" colliders="trimesh" instances={pillarInstances}>
+      <instancedMesh
+        castShadow
+        receiveShadow
+        args={[mergedPillarsGeometry, wallTilesMaterial, pillarPairsAmount]}
+      ></instancedMesh>
+    </InstancedRigidBodies>
   );
 }
 
-export function WallTileGroup({ position = [0, 0, 0] }) {
-  const maximumAmount = 36 * 1.5;
-  const minimumAmount = 20 * 1.5;
+export function WallTiles({ position = [0, 0, 0], count }) {
+  const tileRef = useRef();
+  console.log(count);
+
+  const maximumAmount = 64 * count;
+  const minimumAmount = 32 * count;
   const amountOfTiles = useMemo(
     () => Math.floor(Math.random() * (maximumAmount - minimumAmount + 1)) + minimumAmount,
     []
   );
-  //tiles for 3 blocks
 
-  const generateRandomPosition = (occupiedPositions) => {
-    let newPosition;
-    const tolerance = 0.5;
-    const heightPositionOfTilesGroup = -0.5;
-    const RangeInAxisZ = 4.5;
+  const tileGeometry = new THREE.BoxGeometry(0.1, 0.25, 0.5);
+  const tileMesh = new THREE.InstancedMesh(tileGeometry, wallTilesMaterial, amountOfTiles);
+  tileRef.current = tileMesh;
 
-    do {
-      newPosition = {
-        x: Math.random() > 0.5 ? 2.02 : -2.02,
-        y: heightPositionOfTilesGroup + Math.random() * (2.5 - 0.5),
-        z: Math.random() * RangeInAxisZ - RangeInAxisZ / 2,
-      };
-    } while (isOverlap(newPosition, occupiedPositions, tolerance));
+  const dummy = new THREE.Object3D();
 
-    return newPosition;
-  };
+  const heightPositionOfTilesGroup = 1.4;
+  const RangeInAxisZ = 4 * count;
 
-  const isOverlap = (newPosition, occupiedPositions, tolerance) => {
-    for (const pos of occupiedPositions) {
-      if (
-        Math.abs(newPosition.x - pos.x) < tolerance &&
-        Math.abs(newPosition.y - pos.y) < tolerance &&
-        Math.abs(newPosition.z - pos.z) < tolerance
-      ) {
-        return true; // overlap detected
-      }
-    }
-    return false; // no overlap
-  };
-
-  const initialPositions = [];
-
-  const geometries = [];
   for (let i = 0; i < amountOfTiles; i++) {
-    const geometry = new THREE.BoxGeometry(0.1, 0.25, 0.5);
+    dummy.rotation.x = generateRandomRotation()[0];
+    dummy.rotation.y = generateRandomRotation()[1];
+    dummy.rotation.z = generateRandomRotation()[2];
 
-    geometry.rotateX(generateRandomRotation()[0]);
-    geometry.rotateY(generateRandomRotation()[0]);
-    geometry.rotateZ(generateRandomRotation()[2]);
-
-    const randomPosition = generateRandomPosition(initialPositions);
-    initialPositions.push(randomPosition);
-
-    geometry.translate(randomPosition.x, randomPosition.y, randomPosition.z);
-    geometries.push(geometry);
+    dummy.position.x = Math.random() > 0.5 ? 2.02 : -2.02;
+    dummy.position.y = heightPositionOfTilesGroup + Math.random() * 3.5 - 1.75;
+    dummy.position.z = Math.random() * (RangeInAxisZ + 2) - RangeInAxisZ;
+    dummy.updateMatrix();
+    tileMesh.setMatrixAt(i, dummy.matrix);
   }
 
-  const tilesMergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
-  console.log(tilesMergedGeometry);
-
-  return (
+  return tileRef.current ? (
     <group position={position}>
-      <mesh receiveShadow castShadow geometry={tilesMergedGeometry} material={wallTilesMaterial} />
+      <primitive castShadow object={tileRef.current} />
     </group>
-  );
+  ) : null;
 }
 
 const generateRandomShapeGeometry = () => {
@@ -525,7 +376,7 @@ export function BlockWoodSpinner({ position = [0, 0, 0] }) {
 
   return (
     <group position={position} dispose={null}>
-      <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow />
+      {/* <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow /> */}
       <RigidBody
         ref={obstacle}
         type="kinematicPosition"
@@ -601,7 +452,7 @@ export function BlockLimbo({ position = [0, 0, 0] }) {
 
   return (
     <group position={position}>
-      <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow />
+      {/* <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow /> */}
       <RigidBody
         colliders={false}
         ref={obstacle}
@@ -656,7 +507,7 @@ export function BlockAxe({ position = [0, 0, 0] }) {
 
   return (
     <group position={position}>
-      <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow />
+      {/* <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow /> */}
       <group position={(0, 0, 0)}>
         <RigidBody ref={obstacleWhole} type="kinematicPosition" position={[0, 3.8, 0]}>
           {/* <group dispose={null} position={[0, 0, 0]}> */}
@@ -714,33 +565,38 @@ export function Level({ count = 10, types = [BlockWoodSpinner, BlockAxe, BlockLi
     return blocks;
   }, [count, types]);
   // console.log(blocks);
-
+  // 145 calls 13164 triangles with optyimized code
   return (
     <>
       <Suspense fallback={null}>
-        <BlockStart position={[0, 0, 0]} />
         {/* <RandomShape /> */}
-        <WallTileGroup position={[0, 1, 0]} />
-        {/* <PillarGroup />
-        <PillarGroup position={[0, 3, 0]} shadowToggle={false} /> */}
+        {/* <WallTiles position={[0, 1, 0]} /> */}
+        {/* <PillarGroup blocksAmount={count} />
+        <PillarGroup blocksAmount={count} isRightPillar={true} /> */}
+        {/* <PillarGroup position={[0, 3, 0]} shadowToggle={false} /> */}
+        <InstancedPillarGroup count={count} />
+        <FloorTiles count={count} />
 
-        {/* {blocks.map((Block, index) => (
+        <WallTiles position={[0, 0.5, 0]} count={count} />
+
+        {/* {index % 2 === 1 && <PillarGroup position={[0, 0, -(index + 1) * 4]} />} */}
+        {/* {index % 2 === 1 && <PillarGroup position={[0, 3, -(index + 1) * 4]} shadowToggle={false} />} */}
+
+        {blocks.map((Block, index) => (
           <group key={index}>
-            <Block position={[0, 0, -(index + 1) * 4]} />
-            <TileBottomGroup position={[0, 0, -(index + 1) * 4]} tileIndex={index} />
-            <WallTileGroup position={[0, 0.5, -(index + 1) * 4]} />
-            {index % 2 === 1 && <PillarGroup position={[0, 0, -(index + 1) * 4]} />}
-            {index % 2 === 1 && <PillarGroup position={[0, 3, -(index + 1) * 4]} shadowToggle={false} />}
-            {index % 5 === 0 && <TorchesGroup position={[-1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, 0, 0]} />}
+            {/* <Block position={[0, 0, -(index + 1) * 4]} /> */}
+
+            {/* <PillarGroup position={[0, 0, -(index + 1) * 4]} isRightPillar={true} /> */}
+            {/* {index % 5 === 0 && <TorchesGroup position={[-1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, 0, 0]} />}
             {index % 5 === 0 && (
               <TorchesGroup position={[1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, degrees180, 0]} />
-            )}
+            )} */}
           </group>
         ))}
 
-        <BlockEnd position={[0, 0, -(count + 1) * 4]} />
+        {/* <BlockEnd position={[0, 0, -(count + 1) * 4]} /> */}
 
-        <Bounds length={count + 2} /> */}
+        <Bounds length={count + 2} />
       </Suspense>
     </>
   );

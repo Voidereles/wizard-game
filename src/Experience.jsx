@@ -9,12 +9,12 @@ export default function Experience() {
   return (
     <>
       <OrbitControls makeDefault />
-      <Perf />
-      <Physics debug={false}>
+      <Perf showGraph={false} />
+      <Physics debug={true}>
         <Lights />
 
         <Level />
-        <Player />
+        {/* <Player /> */}
       </Physics>
     </>
   );
