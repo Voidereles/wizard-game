@@ -1,11 +1,11 @@
-import * as THREE from "three";
-import { CuboidCollider, InstancedRigidBodies, RigidBody } from "@react-three/rapier";
-import { useMemo, useState, useRef, useEffect, Suspense } from "react";
-import { useFrame, useLoader } from "@react-three/fiber";
-import { useGLTF, useTexture } from "@react-three/drei";
-import { useControls } from "leva";
-import { ExtrudeGeometry } from "three";
-import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import * as THREE from 'three';
+import { CuboidCollider, InstancedRigidBodies, RigidBody } from '@react-three/rapier';
+import { useMemo, useState, useRef, useEffect, Suspense } from 'react';
+import { useFrame, useLoader } from '@react-three/fiber';
+import { useGLTF, useTexture } from '@react-three/drei';
+import { useControls } from 'leva';
+import { ExtrudeGeometry } from 'three';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 THREE.ColorManagement.legacyMode = false;
 THREE.ColorManagement.enabled = true;
@@ -18,7 +18,7 @@ const coneGeometry = new THREE.ConeGeometry(2, 15, 3, 1);
 
 const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x282222 });
 const tilesMaterial = new THREE.MeshStandardMaterial({ color: 0x151515 });
-const obstacleMaterial = new THREE.MeshStandardMaterial({ color: "orangered" });
+const obstacleMaterial = new THREE.MeshStandardMaterial({ color: 'orangered' });
 const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x333339 });
 const wallTilesMaterial = new THREE.MeshStandardMaterial({ color: 0x393939 });
 
@@ -31,22 +31,26 @@ const darkWoodMaterial = new THREE.MeshStandardMaterial({ color: 0x502900 });
 const firePlaceMaterial = new THREE.MeshStandardMaterial({ color: 0x270a08 });
 
 const textureLoader = new THREE.TextureLoader();
-const simpleShadow = textureLoader.load("./simpleShadow2.jpg");
+const simpleShadow = textureLoader.load('./simpleShadow2.jpg');
 
 const fireShadowMaterial = new THREE.MeshBasicMaterial({
   color: 0xff8833,
   transparent: true,
   alphaMap: simpleShadow,
-  side: THREE.DoubleSide,
 });
 
 const degrees45 = Math.PI / 4;
 const degrees60 = Math.PI / 3;
+const degrees75 = Math.PI / 2.5;
 const degrees90 = Math.PI / 2;
 const degrees180 = Math.PI;
 
 function getRandomSign() {
   return Math.random() < 0.5 ? 1 : -1;
+}
+
+function round2Decimals(num) {
+  return Math.round(num * 100) / 100;
 }
 
 export function Bounds({ length = 1 }) {
@@ -61,7 +65,7 @@ export function Bounds({ length = 1 }) {
   return (
     <>
       {
-        <RigidBody type="fixed" colliders="trimesh" restitution={0.2} friction={0}>
+        <RigidBody type='fixed' colliders='trimesh' restitution={0.2} friction={0}>
           {/* floor */}
           <mesh
             geometry={boxGeometry}
@@ -82,6 +86,7 @@ const generateRandomRotation = () => [
   (Math.random() - 0.5) * 0.15,
   (Math.random() - 0.5) * 0.15,
 ];
+
 const FlameBox = ({ position, delay }) => {
   const materialColor = useMemo(() => [Math.random() + 0.8, Math.random() * 0.3, 0], []);
   const [scale, setScale] = useState([1, 1, 1]);
@@ -127,82 +132,237 @@ const FlameBox = ({ position, delay }) => {
   );
 };
 
-export function FloorTiles({ position = [0, 0, 0] }) {
-  const maximumAmount = 36 * 2;
-  const minimumAmount = 20 * 2;
-  const amountOfTiles = useMemo(() => Math.floor(Math.random() * (2 - 2 + 1)) + 2, []);
+export function FloorTiles({ position = [0, 0, 0], count }) {
+  const instancedCylinderMeshRef = useRef();
+  const temp = new THREE.Object3D();
 
-  const tileSize = 0.6;
-  const yBase = 0.15;
   const yOffset = 0.001;
-  const grid = new Set();
-
-  return (
-    <group position={position}>
-      {Array(amountOfTiles)
-        .fill()
-        .map((_, index) => {
-          const positionBox = getRandomNonOverlappingPosition(_, index, "box");
-          const positionCylinder = getRandomNonOverlappingPosition(_, index, "cylinder");
-
-          return (
-            <group key={`tileGroup-${index}`}>
-              <mesh
-                key={`box-${index}`}
-                position={positionBox}
-                rotation={[(Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.2]}
-                castShadow
-                geometry={boxGeometry}
-                material={wallMaterial}
-                scale={[0.9, 0.3, 1.1]}
-              />
-              <mesh
-                key={`cylinder-${index}`}
-                position={positionCylinder}
-                rotation={[(Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.2]}
-                castShadow
-                geometry={Math.random() > 0.5 ? cylinderGeometry5 : cylinderGeometry7}
-                material={wallMaterial}
-                scale={[0.1, 0.1, 0.1]}
-              />
-            </group>
-          );
-        })}
-    </group>
+  const maximumAmount = 4 * count;
+  const minimumAmount = 3 * count;
+  const amountOfTiles = useMemo(
+    () => Math.floor(Math.random() * (maximumAmount - minimumAmount + 1)) + minimumAmount,
+    []
   );
+
+  const RangeInAxisZ = 4 * count;
+  //maybe delete mathfloor, rethink it...
+
+  useEffect(() => {
+    for (let i = 0; i < amountOfTiles; i++) {
+      temp.position.set(
+        (Math.random() - 0.5) * 3,
+        -0.03 + Math.min(yOffset * i, 0.05),
+
+        (Math.random() * (RangeInAxisZ - 2) - RangeInAxisZ) + 2
+      );
+      temp.scale.set(0.1, 0.1, 0.1);
+
+      temp.rotation.set((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.2);
+      temp.updateMatrix();
+      instancedCylinderMeshRef.current.setMatrixAt(i, temp.matrix);
+    }
+
+    // instancedCylinderMeshRef.current.instanceMatrix.needsUpdate = true;
+  }, []);
+
+  return <instancedMesh ref={instancedCylinderMeshRef} args={[cylinderGeometry5, wallMaterial, amountOfTiles]} />;
 }
 
-export function TorchesGroup({ position = [-1.5, 1, 2], rotation }) {
-  const { nodes } = useGLTF("/torch.glb");
+const createMatrix = (position, rotation, scale) => {
+  const matrix = new THREE.Matrix4();
+  let innerScale;
+  if (!scale) {
+    innerScale = new THREE.Vector3(1, 1, 1);
+  }
+  else {
+    innerScale = new THREE.Vector3(scale[0], scale[1], scale[2])
+  }
+  // Set rotation
+  if (position && rotation) {
+  
+  const rotationMatrix = new THREE.Matrix4();
+  rotationMatrix.makeRotationFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2]));
 
-  const isRightTorch = rotation[1] === degrees180;
-  const rightBloomRotationY = degrees60 * 2;
-  const leftBloomRotationY = degrees60;
+  // Set position and apply rotation
+  matrix.compose(new THREE.Vector3(position[0], position[1], position[2]), 
+                 new THREE.Quaternion().setFromRotationMatrix(rotationMatrix),
+                 innerScale);
+                }
+  return matrix;
+};
 
-  const angledBloomRotation = [0, isRightTorch ? rightBloomRotationY : leftBloomRotationY, 0];
-  const angledBloomPosition = [0.05, 1.65, isRightTorch ? -0.5 : 0.5];
+export function TorchesGroup({ position = [-1.5, 1, 2], count }) {
+  const { nodes, materials } = useGLTF('/torch.glb');
 
-  const wallBloomPosition = [-0.3, 1.6, -0.5];
+  const flameColor = useMemo(() => [Math.random() + 0.8, Math.random() * 0.3, 0], []); 
+  // TODO: do a 
+
+  const torchesPairAmount = Math.floor(count / 5); //in case of 10 its 2
+
+  const flameParticlesPerPair = 24;
+  const amountOfFlamesPart = flameParticlesPerPair * torchesPairAmount;
+  const tempFlame = new THREE.Object3D();
+  const tempBloom = new THREE.Object3D();
+
+  
+  const meshRef = useRef();
+  const bloomRef = useRef();
+  // const angledBloomRotation = [0, isRightTorch ? rightBloomRotationY : leftBloomRotationY, 0];
+  // const angledBloomPosition = [0.05, 1.65, isRightTorch ? -0.5 : 0.5];
+
+  // const wallBloomPosition = [-0.3, 1.6, -0.5];
+
+  const torchElementsInstances = useMemo(() => {
+    const torchInstances = [];
+    const flameInstances = [];
+    const bloomInstances = [];
+
+
+    for (let i = 0; i < torchesPairAmount; i++) {
+      const torchPositionLeft = [-1.8, 1.5, -(i + 1) * 2 * 8 + 10];
+      const torchPositionRight = [1.8, 1.5, -(i + 1) * 2 * 8 + 10];
+
+      torchInstances.push({
+        key: 'torch-instance-left_' + i,
+        position: torchPositionLeft,
+        rotation: [0, 0, 0],
+        scale: [0.6, 0.6, 0.6],
+      });
+
+      torchInstances.push({
+        key: 'torch-instance-right_' + i,
+        position: torchPositionRight,
+        rotation: [0, degrees180, 0],
+        scale: [0.6, 0.6, 0.6],
+      });
+
+      bloomInstances.push({
+        key: 'angled-bloom-instance-left_' + i,
+        position: [torchPositionLeft[0] + 0.15, 1.8, torchPositionLeft[2] + 0.35 ],
+        rotation: [0, degrees60, 0],
+        scale: [0.4, 0.7, 0.4]
+      })
+      
+      bloomInstances.push({
+        key: 'angled-bloom-instance-right_' + i,
+        position: [torchPositionRight[0] - 0.15, 1.8, torchPositionRight[2] + 0.35],
+        rotation: [0, -degrees60, 0],
+        scale: [0.4, 0.7, 0.4]
+      })
+
+      bloomInstances.push({
+        key: 'wall-bloom-instance-left_' + i,
+        position: [torchPositionLeft[0] - 0.1, 1.8, torchPositionLeft[2] - 0.25],
+        rotation: [0, degrees90, 0],
+        scale: [0.4, 0.6, 0.4]
+      })
+
+      bloomInstances.push({
+        key: 'wall-bloom-instance-right_' + i,
+        position: [torchPositionRight[0] + 0.1, 1.8, torchPositionRight[2] ],
+        rotation: [0, -degrees90, 0],
+        scale: [0.4, 0.6, 0.4]
+      })
+
+      for (let j = 0; j < flameParticlesPerPair; j++) {
+        const tempFlameXPosition =
+          j % 2 === 0
+            ? (Math.random() - 0.5) * 0.2 + torchPositionLeft[0]
+            : (Math.random() - 0.5) * 0.2 + torchPositionRight[0];
+        
+        tempFlame.scale.set(0.1, 0.1, 0.1);
+
+        const initialPosition =  [
+          round2Decimals(tempFlameXPosition, -3),
+          round2Decimals(0.1 + torchPositionLeft[1], -3),
+          round2Decimals((Math.random() - 0.5) * 0.2 + torchPositionLeft[2], -3)];
+
+        const delay = j / 3;
+        const initialScaleFactor = Math.random() * 0.1 / (j * 3); 
+        // delay goes up as  scale is lesser if the delay is bigger;
+        // scale same, if some box it will appear later, smaller it will be
+
+        flameInstances.push({
+          delay,
+          initialPosition,
+          position: [...initialPosition],
+          scale: [initialScaleFactor, initialScaleFactor, initialScaleFactor],
+        });
+      }
+    }
+
+    return [torchInstances, flameInstances, bloomInstances];
+  }, [count]);
+
+
+
+  useFrame((state, delta) => {
+    const timeFactor = delta * 0.5;
+    torchElementsInstances[1].forEach((instance, index) => {
+
+      if (!(state.clock.elapsedTime < instance.delay)) {
+        // If the elapsed time is less than the delay, skip the animation
+        instance.scale[0] -= 0.1 * timeFactor;
+        instance.scale[1] -= 0.1 * timeFactor;
+        instance.scale[2] -= 0.1 * timeFactor;
+  
+  
+        instance.position[0] -= 0.05 * timeFactor;
+        instance.position[1] += 0.325 * timeFactor;
+        instance.position[2] -= 0.05 * timeFactor;
+
+  
+        if (instance.scale[0] < 0.01) {
+          [instance.scale[0], instance.scale[1], instance.scale[2]] = [0.08, 0.08, 0.08];
+          [instance.position[0], instance.position[1], instance.position[2]] = instance.initialPosition;
+        }
+      }
+
+  
+      const matrix = new THREE.Matrix4();
+     // prettier-ignore
+      matrix.set(
+        instance.scale[0], 0, 0, instance.position[0],
+        0, instance.scale[1], 0, instance.position[1],
+        0, 0, instance.scale[2], instance.position[2],
+        0, 0, 0, 1
+      );
+
+      meshRef.current.setMatrixAt(index, matrix);
+    });
+
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  useEffect(() => {
+    torchElementsInstances[2].forEach((instance, index) => {
+      const matrix = createMatrix(instance.position, instance.rotation, instance.scale);
+
+      // Use the matrix as needed
+      bloomRef.current.setMatrixAt(index, matrix);
+    })
+  }, [])
+
+  return (
+    <group>
+      <instancedMesh ref={meshRef} args={[boxGeometry, null, amountOfFlamesPart]}>
+        <meshStandardMaterial attach='material' color={flameColor} transparent opacity={1} />
+      </instancedMesh>
+
+      <instancedMesh ref={bloomRef} args={[planeGeometry, fireShadowMaterial, torchesPairAmount * 4]} />
+    
+      <InstancedRigidBodies type='fixed' colliders='hull' instances={torchElementsInstances[0]}>
+        <instancedMesh
+          castShadow
+          receiveShadow
+          args={[nodes.TorchGeometry.geometry, materials['Material.002'], torchesPairAmount * 2]}
+        />
+      </InstancedRigidBodies>
+    </group>
+  );
 
   return (
     <group position={position} dispose={null}>
-      <group scale={[0.6, 0.6, 0.6]} rotation={rotation}>
-        <RigidBody type="fixed" colliders="hull" restitution={0.2} friction={0}>
-          <mesh
-            castShadow
-            receiveShadow
-            geometry={nodes.WoodPart.geometry}
-            material={darkWoodMaterial}
-            position={[-0.002, 0.73, 0.001]}
-          />
-        </RigidBody>
-        <mesh
-          castShadow
-          receiveShadow
-          geometry={nodes.MetalPart.geometry}
-          material={blackMetalMaterial}
-          position={[-0.039, 0.817, 0]}
-        />
         <mesh
           geometry={planeGeometry}
           material={fireShadowMaterial}
@@ -210,7 +370,6 @@ export function TorchesGroup({ position = [-1.5, 1, 2], rotation }) {
           rotation={[0, degrees90, 0]}
           scale={[1, 1, 1.5]}
         />
-        <mesh geometry={nodes.FirePlace.geometry} material={firePlaceMaterial} position={[0, 1.187, 0]} />
 
         <mesh
           geometry={planeGeometry}
@@ -219,25 +378,16 @@ export function TorchesGroup({ position = [-1.5, 1, 2], rotation }) {
           scale={[0.5, 1.5, 0.5]}
           rotation={angledBloomRotation}
         />
-      </group>
-      <group position={[0, 0.67, 0]}>
-        {Array.from({ length: 12 }).map((_, index) => (
-          <FlameBox
-            key={index}
-            position={[(Math.random() - 0.5) * 0.2, 0.1, (Math.random() - 0.5) * 0.2]}
-            delay={Math.random() * 15000} // Adjust the delay as needed
-          />
-        ))}
-      </group>
+    
     </group>
   );
 }
 
-useGLTF.preload("/torch.glb");
-useGLTF.preload("/pillar-doubled2.glb");
+useGLTF.preload('/torch.glb');
+useGLTF.preload('/pillar-doubled2.glb');
 
 export function InstancedPillarGroup({ positionZ = 0, count }) {
-  const { nodes } = useGLTF("/pillar-doubled2.glb");
+  const { nodes } = useGLTF('/pillar-doubled2.glb');
   const pillarPairsAmount = count / 2;
 
   const pillarInstances = useMemo(() => {
@@ -245,15 +395,15 @@ export function InstancedPillarGroup({ positionZ = 0, count }) {
 
     for (let i = 0; i < pillarPairsAmount; i++) {
       instances.push({
-        key: "pillar-instance-left_" + i,
-        position: [-1.8, 2.6, -(i + 1) * 2 * 4 + 6],
+        key: 'pillar-instance-left_' + i,
+        position: [-1.8, 2.62, -(i + 1) * 2 * 4 + 6],
         rotation: [0, 0, 0],
         scale: [0.25, 0.14, 0.25],
       });
 
       instances.push({
-        key: "pillar-instance-right_" + i,
-        position: [1.8, 2.6, -(i + 1) * 2 * 4 + 6],
+        key: 'pillar-instance-right_' + i,
+        position: [1.8, 2.62, -(i + 1) * 2 * 4 + 6],
         rotation: [0, degrees180, 0],
         scale: [0.25, 0.14, 0.25],
       });
@@ -268,11 +418,11 @@ export function InstancedPillarGroup({ positionZ = 0, count }) {
   const mergedPillarsGeometry = BufferGeometryUtils.mergeGeometries(pillarGeometry);
 
   return (
-    <InstancedRigidBodies type="fixed" colliders="trimesh" instances={pillarInstances}>
+    <InstancedRigidBodies type='fixed' colliders='trimesh' instances={pillarInstances}>
       <instancedMesh
         castShadow
         receiveShadow
-        args={[mergedPillarsGeometry, wallTilesMaterial, pillarPairsAmount]}
+        args={[mergedPillarsGeometry, wallTilesMaterial, count]}
       ></instancedMesh>
     </InstancedRigidBodies>
   );
@@ -280,7 +430,6 @@ export function InstancedPillarGroup({ positionZ = 0, count }) {
 
 export function WallTiles({ position = [0, 0, 0], count }) {
   const tileRef = useRef();
-  console.log(count);
 
   const maximumAmount = 64 * count;
   const minimumAmount = 32 * count;
@@ -358,13 +507,13 @@ export function RandomShape({
   );
 }
 
-useGLTF.preload("/woodenBar.glb");
+useGLTF.preload('/woodenBar.glb');
 
 export function BlockWoodSpinner({ position = [0, 0, 0] }) {
   const obstacle = useRef();
   const [speed] = useState(() => (Math.random() + 0.7) * getRandomSign()); // if the component will get rerendered, the speed will stay the same
 
-  const { nodes } = useGLTF("/woodenBar.glb");
+  const { nodes } = useGLTF('/woodenBar.glb');
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
@@ -379,7 +528,7 @@ export function BlockWoodSpinner({ position = [0, 0, 0] }) {
       {/* <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow /> */}
       <RigidBody
         ref={obstacle}
-        type="kinematicPosition"
+        type='kinematicPosition'
         position={[getRandomSign(), 0.3, getRandomSign()]}
         restitution={0.2}
         friction={0}
@@ -456,7 +605,7 @@ export function BlockLimbo({ position = [0, 0, 0] }) {
       <RigidBody
         colliders={false}
         ref={obstacle}
-        type="kinematicPosition"
+        type='kinematicPosition'
         position={[0, 5, 0]}
         restitution={0.2}
         friction={0}
@@ -491,7 +640,7 @@ export function BlockAxe({ position = [0, 0, 0] }) {
   const obstacleWhole = useRef();
   const [timeOffset] = useState(() => Math.random() * 2 * degrees180);
 
-  const { nodes } = useGLTF("/axe2.glb");
+  const { nodes } = useGLTF('/axe2.glb');
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
@@ -509,7 +658,7 @@ export function BlockAxe({ position = [0, 0, 0] }) {
     <group position={position}>
       {/* <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow /> */}
       <group position={(0, 0, 0)}>
-        <RigidBody ref={obstacleWhole} type="kinematicPosition" position={[0, 3.8, 0]}>
+        <RigidBody ref={obstacleWhole} type='kinematicPosition' position={[0, 3.8, 0]}>
           {/* <group dispose={null} position={[0, 0, 0]}> */}
           {/* axe blade */}
           {/* <mesh castShadow receiveShadow geometry={nodes.Cube.geometry} material={shinyMetalMaterial} /> */}
@@ -535,7 +684,7 @@ export function BlockAxe({ position = [0, 0, 0] }) {
   );
 }
 
-useGLTF.preload("/axe2.glb");
+useGLTF.preload('/axe2.glb');
 
 export function BlockEnd({ position = [0, 0, 0] }) {
   // const hamburger = useGLTF("./hamburger.glb");
@@ -546,14 +695,14 @@ export function BlockEnd({ position = [0, 0, 0] }) {
   return (
     <group position={position}>
       <mesh geometry={boxGeometry} material={floorMaterial} position={[0, 0, 0]} scale={[4, 0.2, 4]} receiveShadow />
-      <RigidBody type="fixed" colliders="hull" position={[0, 0.25, 0]} restitution={0.2} friction={0}>
+      <RigidBody type='fixed' colliders='hull' position={[0, 0.25, 0]} restitution={0.2} friction={0}>
         {/* <primitive object={hamburger.scene} scale={0.2} /> */}
       </RigidBody>
     </group>
   );
 }
 
-export function Level({ count = 10, types = [BlockWoodSpinner, BlockAxe, BlockLimbo] }) {
+export function Level({ count = 30, types = [BlockWoodSpinner, BlockAxe, BlockLimbo] }) {
   // export function Level({ count = 5, types = [BlockLimbo] }) {
   const blocks = useMemo(() => {
     const blocks = [];
@@ -569,24 +718,16 @@ export function Level({ count = 10, types = [BlockWoodSpinner, BlockAxe, BlockLi
   return (
     <>
       <Suspense fallback={null}>
-        {/* <RandomShape /> */}
-        {/* <WallTiles position={[0, 1, 0]} /> */}
-        {/* <PillarGroup blocksAmount={count} />
-        <PillarGroup blocksAmount={count} isRightPillar={true} /> */}
-        {/* <PillarGroup position={[0, 3, 0]} shadowToggle={false} /> */}
         <InstancedPillarGroup count={count} />
         <FloorTiles count={count} />
 
         <WallTiles position={[0, 0.5, 0]} count={count} />
-
-        {/* {index % 2 === 1 && <PillarGroup position={[0, 0, -(index + 1) * 4]} />} */}
-        {/* {index % 2 === 1 && <PillarGroup position={[0, 3, -(index + 1) * 4]} shadowToggle={false} />} */}
+        <TorchesGroup count={count} />
 
         {blocks.map((Block, index) => (
           <group key={index}>
             {/* <Block position={[0, 0, -(index + 1) * 4]} /> */}
 
-            {/* <PillarGroup position={[0, 0, -(index + 1) * 4]} isRightPillar={true} /> */}
             {/* {index % 5 === 0 && <TorchesGroup position={[-1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, 0, 0]} />}
             {index % 5 === 0 && (
               <TorchesGroup position={[1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, degrees180, 0]} />

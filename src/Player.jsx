@@ -1,8 +1,8 @@
-import { RigidBody, useRapier } from "@react-three/rapier";
-import { useFrame } from "@react-three/fiber";
-import { useKeyboardControls } from "@react-three/drei";
-import { useState, useRef, useEffect } from "react";
-import * as THREE from "three";
+import { RigidBody, useRapier } from '@react-three/rapier';
+import { useFrame } from '@react-three/fiber';
+import { useKeyboardControls } from '@react-three/drei';
+import { useState, useRef, useEffect } from 'react';
+import * as THREE from 'three';
 
 export default function Player() {
   const body = useRef();
@@ -97,14 +97,14 @@ export default function Player() {
       angularDamping={0.5}
       ref={body}
       canSleep={false}
-      colliders="ball"
+      colliders='ball'
       restitution={0.2}
       friction={1}
       position={[0, 4, -1]}
     >
       <mesh castShadow>
         <icosahedronGeometry args={[0.3, 1]} />
-        <meshStandardMaterial flatShading color="mediumpurple" />
+        <meshStandardMaterial flatShading color='mediumpurple' />
       </mesh>
     </RigidBody>
   );
