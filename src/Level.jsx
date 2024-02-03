@@ -195,7 +195,7 @@ export function TorchesGroup({ position = [-1.5, 1, 2], count }) {
   const { nodes, materials } = useGLTF('/torch.glb');
 
   const flameColor = useMemo(() => [Math.random() + 0.8, Math.random() * 0.3, 0], []); 
-  // TODO: do a 
+  // TODO: make various colors
 
   const torchesPairAmount = Math.floor(count / 5); //in case of 10 its 2
 
@@ -205,12 +205,8 @@ export function TorchesGroup({ position = [-1.5, 1, 2], count }) {
   const tempBloom = new THREE.Object3D();
 
   
-  const meshRef = useRef();
+  const flameRef = useRef();
   const bloomRef = useRef();
-  // const angledBloomRotation = [0, isRightTorch ? rightBloomRotationY : leftBloomRotationY, 0];
-  // const angledBloomPosition = [0.05, 1.65, isRightTorch ? -0.5 : 0.5];
-
-  // const wallBloomPosition = [-0.3, 1.6, -0.5];
 
   const torchElementsInstances = useMemo(() => {
     const torchInstances = [];
@@ -328,10 +324,10 @@ export function TorchesGroup({ position = [-1.5, 1, 2], count }) {
         0, 0, 0, 1
       );
 
-      meshRef.current.setMatrixAt(index, matrix);
+      flameRef.current.setMatrixAt(index, matrix);
     });
 
-    meshRef.current.instanceMatrix.needsUpdate = true;
+    flameRef.current.instanceMatrix.needsUpdate = true;
   });
 
   useEffect(() => {
@@ -345,7 +341,7 @@ export function TorchesGroup({ position = [-1.5, 1, 2], count }) {
 
   return (
     <group>
-      <instancedMesh ref={meshRef} args={[boxGeometry, null, amountOfFlamesPart]}>
+      <instancedMesh ref={flameRef} args={[boxGeometry, null, amountOfFlamesPart]}>
         <meshStandardMaterial attach='material' color={flameColor} transparent opacity={1} />
       </instancedMesh>
 
@@ -358,27 +354,6 @@ export function TorchesGroup({ position = [-1.5, 1, 2], count }) {
           args={[nodes.TorchGeometry.geometry, materials['Material.002'], torchesPairAmount * 2]}
         />
       </InstancedRigidBodies>
-    </group>
-  );
-
-  return (
-    <group position={position} dispose={null}>
-        <mesh
-          geometry={planeGeometry}
-          material={fireShadowMaterial}
-          position={wallBloomPosition}
-          rotation={[0, degrees90, 0]}
-          scale={[1, 1, 1.5]}
-        />
-
-        <mesh
-          geometry={planeGeometry}
-          material={fireShadowMaterial}
-          position={angledBloomPosition}
-          scale={[0.5, 1.5, 0.5]}
-          rotation={angledBloomRotation}
-        />
-    
     </group>
   );
 }
