@@ -59,7 +59,12 @@ export function Bounds({ length = 1 }) {
     new THREE.BoxGeometry(0.3, 6.2, 4 * length).translate(2.15, 2.9, -(length * 2) + 2),
     new THREE.BoxGeometry(0.3, 0.2, 4 * length).translate(-2, 0.13, -(length * 2) + 2),
     new THREE.BoxGeometry(0.3, 0.2, 4 * length).translate(2, 0.13, -(length * 2) + 2),
-    new THREE.BoxGeometry(4, 0.2, 4 * length).translate(0, 6.05, -(length * 2) + 3),
+    // ROOF BELOW
+    // new THREE.BoxGeometry(4, 0.2, 4 * length).translate(0, 6.05, -(length * 2) + 3), 
+
+    
+    // new THREE.BoxGeometry(4, 4, 4).translate(0, 0.13, 0),
+    // new THREE.BoxGeometry(4, 4, 4).translate(0, 0.13, -8),
   ]);
 
   return (
@@ -692,7 +697,6 @@ export function Level({ count = 30, types = [BlockWoodSpinner, BlockAxe, BlockLi
   // 145 calls 13164 triangles with optyimized code
   return (
     <>
-      <Suspense fallback={null}>
         <InstancedPillarGroup count={count} />
         <FloorTiles count={count} />
 
@@ -713,7 +717,6 @@ export function Level({ count = 30, types = [BlockWoodSpinner, BlockAxe, BlockLi
         {/* <BlockEnd position={[0, 0, -(count + 1) * 4]} /> */}
 
         <Bounds length={count + 2} />
-      </Suspense>
     </>
   );
 }

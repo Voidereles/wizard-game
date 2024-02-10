@@ -1,111 +1,86 @@
-import { RigidBody, useRapier } from '@react-three/rapier';
-import { useFrame } from '@react-three/fiber';
-import { useKeyboardControls } from '@react-three/drei';
-import { useState, useRef, useEffect } from 'react';
-import * as THREE from 'three';
+
+import { KeyboardControls, useAnimations, useGLTF } from '@react-three/drei'
+import { Suspense, useRef } from 'react'
+import Ecctrl, { EcctrlAnimation, EcctrlJoystick } from 'ecctrl'
+import { Physics } from '@react-three/rapier';
+
+
+
+export function Model(props) {
+  const group = useRef();
+  const { nodes, materials, animations } = useGLTF("/wizard11.glb");
+  const { actions } = useAnimations(animations, group);
+  return (
+    <group ref={group} {...props} dispose={null}>
+      <group name="Scene">
+        <group name="Armature" rotation={[Math.PI / 2, 0, 0]} scale={0.018}>
+          <skinnedMesh
+            name="Body"
+            geometry={nodes.Body.geometry}
+            material={materials["HatGreen.002"]}
+            skeleton={nodes.Body.skeleton}
+          />
+          <skinnedMesh
+            name="BodyBag"
+            geometry={nodes.BodyBag.geometry}
+            material={materials["HatGreen.002"]}
+            skeleton={nodes.BodyBag.skeleton}
+          />
+          <skinnedMesh
+            name="BodyBuckle"
+            geometry={nodes.BodyBuckle.geometry}
+            material={materials["HatGreen.002"]}
+            skeleton={nodes.BodyBuckle.skeleton}
+          />
+          <primitive object={nodes.mixamorigHips} />
+        </group>
+      </group>
+    </group>
+  );
+}
+
+
 
 export default function Player() {
-  const body = useRef();
-  const [subscribeKeys, getKeys] = useKeyboardControls();
-  const { rapier, world: rapierWorld } = useRapier();
+  
+  const keyboardMap = [
+    { name: 'forward', keys: ['ArrowUp', 'KeyW'] },
+    { name: 'backward', keys: ['ArrowDown', 'KeyS'] },
+    { name: 'leftward', keys: ['ArrowLeft', 'KeyA'] },
+    { name: 'rightward', keys: ['ArrowRight', 'KeyD'] },
+    { name: "jump", keys: ["Space"] },
+    { name: "run", keys: ["Shift"] },
 
-  const [smoothedCameraPosition] = useState(() => new THREE.Vector3(10, 10, 10));
-  const [smoothedCameraTarget] = useState(() => new THREE.Vector3());
+  ]
 
-  const jump = () => {
-    const origin = body.current.translation();
-    origin.y -= 0.31; // because of what console.log of starting position (what origin says) says
-    const direction = { x: 0, y: -1, z: 0 };
-    const ray = new rapier.Ray(origin, direction);
-    const hit = rapierWorld.castRay(ray, 10, true);
-    if (hit.toi < 0.15) {
-      body.current.applyImpulse({ x: 0, y: 0.8, z: 0 });
-    }
-  };
+  const characterURL = "/wizard11.glb";
 
-  useEffect(() => {
-    const unsubscribeJump = subscribeKeys(
-      (state) => {
-        return state.jump;
-      },
-      // above is 100% same as
-      // (state) => state.jump
-      //
-      (value) => {
-        if (value) jump();
-      }
-      // if jump changes, second function is called
-    );
+  const animationSet = {
+    idle: 'Idle_Armature',
+    walk: 'Walk_Armature',
+    run: 'Walk_Armature',
+    jump:'Walk_Armatured',
+    jumpIdle: 'Idle_Armature',
+    jumpLand: 'Walk_Armature',
+    fall: 'Walk_Armature',
+    action1: 'Walk_Armature',
+    action2: 'Walk_Armature',
+    action3: 'Walk_Armature',
+    action4: 'Walk_Armature',
+  }
 
-    return () => {
-      unsubscribeJump();
-    };
-  }, []);
-
-  useFrame((state, delta) => {
-    const { forward, backward, leftward, rightward } = getKeys();
-
-    const impulse = { x: 0, y: 0, z: 0 };
-    const torque = { x: 0, y: 0, z: 0 };
-
-    const impulseStrength = 0.6 * delta;
-    const torqueStrength = 0.2 * delta;
-
-    if (forward) {
-      impulse.z -= impulseStrength;
-      torque.x -= torqueStrength;
-    }
-
-    if (backward) {
-      impulse.z += impulseStrength;
-      torque.x += torqueStrength;
-    }
-
-    if (rightward) {
-      impulse.x += impulseStrength;
-      torque.z -= torqueStrength;
-    }
-
-    if (leftward) {
-      impulse.x -= impulseStrength;
-      torque.z += torqueStrength;
-    }
-
-    body.current.applyImpulse(impulse);
-    body.current.applyTorqueImpulse(torque);
-
-    const bodyPosition = body.current.translation();
-    const cameraPosition = new THREE.Vector3();
-    cameraPosition.copy(bodyPosition);
-    cameraPosition.z += 4.25;
-    cameraPosition.y += 1.8;
-
-    const cameraTarget = new THREE.Vector3();
-    cameraTarget.copy(bodyPosition);
-    cameraTarget.y -= -0.84;
-
-    smoothedCameraPosition.lerp(cameraPosition, 5 * delta); // delta is for different framerates of monitors
-    smoothedCameraTarget.lerp(cameraTarget, 5 * delta);
-
-    state.camera.position.copy(smoothedCameraPosition);
-    state.camera.lookAt(smoothedCameraTarget);
-  });
 
   return (
-    <RigidBody
-      linearDamping={0.5}
-      angularDamping={0.5}
-      ref={body}
-      canSleep={false}
-      colliders='ball'
-      restitution={0.2}
-      friction={1}
-      position={[0, 4, -1]}
-    >
-      <mesh castShadow>
-        <icosahedronGeometry args={[0.3, 1]} />
-        <meshStandardMaterial flatShading color='mediumpurple' />
-      </mesh>
-    </RigidBody>
-  );
+    
+      <Suspense fallback={null}>
+        <KeyboardControls map={keyboardMap}>
+        <Ecctrl  position={[1, 20, -5]} debug floatHeight={0.2}>
+          <EcctrlAnimation characterURL={characterURL} animationSet={animationSet}>
+            <Model  />
+          </EcctrlAnimation>
+        </Ecctrl>
+        </KeyboardControls>
+    </Suspense>
+ 
+  )
 }

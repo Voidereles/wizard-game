@@ -13,22 +13,22 @@ export default function Lights() {
   })
   // #ffb08c
 
-  // const { position } = useControls({
-//   position: {
-//     value: { x: 0, y: 5, z: 1 },
-//     step: 0.5,
-//   },
-// });
-// const positionP = useControls({
-//   position: {
-//     value: { x: 0, y: 2.66, z: 0 },
-//     step: 0.05,
-//   },
-//   scale: {
-//     value: { x: 0.5, y: 0.35, z: 0.6 },
-//     step: 0.05,
-//   },
-// });
+  const { position } = useControls({
+  position: {
+    value: { x: 0, y: 5, z: 1 },
+    step: 0.5,
+  },
+});
+const positionP = useControls({
+  position: {
+    value: { x: 0, y: 2.66, z: 0 },
+    step: 0.05,
+  },
+  scale: {
+    value: { x: 0.5, y: 0.35, z: 0.6 },
+    step: 0.05,
+  },
+});
 
 
   useFrame((state) => {
@@ -42,6 +42,7 @@ export default function Lights() {
       <spotLight
         ref={light}
         castShadow
+        // position={position.value}
         position={[0, 4.5, 5.5]}
         intensity={305.5}
         color={color.value}
