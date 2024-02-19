@@ -33,6 +33,8 @@ const firePlaceMaterial = new THREE.MeshStandardMaterial({ color: 0x270a08 });
 const textureLoader = new THREE.TextureLoader();
 const simpleShadow = textureLoader.load('./simpleShadow2.jpg');
 
+
+
 const fireShadowMaterial = new THREE.MeshBasicMaterial({
   color: 0xff8833,
   transparent: true,
@@ -55,12 +57,11 @@ function round2Decimals(num) {
 
 export function Bounds({ length = 1 }) {
   const mergedGeometry = BufferGeometryUtils.mergeGeometries([
-    new THREE.BoxGeometry(0.3, 3.2 + 3, 4 * length).translate(-2.15, 2.9, -(length * 2) + 2),
-    new THREE.BoxGeometry(0.3, 6.2, 4 * length).translate(2.15, 2.9, -(length * 2) + 2),
-    new THREE.BoxGeometry(0.3, 0.2, 4 * length).translate(-2, 0.13, -(length * 2) + 2),
-    new THREE.BoxGeometry(0.3, 0.2, 4 * length).translate(2, 0.13, -(length * 2) + 2),
-    // ROOF BELOW
-    // new THREE.BoxGeometry(4, 0.2, 4 * length).translate(0, 6.05, -(length * 2) + 3), 
+    new THREE.BoxGeometry(1, 3.2 + 3, 4 * length).translate(-3.5, 2.9, -(length * 2) + 2), // high wall left
+    new THREE.BoxGeometry(1, 6.2, 4 * length).translate(3.5, 2.9, -(length * 2) + 2), // high wall right
+    new THREE.BoxGeometry(0.3, 0.2, 4 * length).translate(-2.9, 0.13, -(length * 2) + 2), // thin small left
+    new THREE.BoxGeometry(0.3, 0.2, 4 * length).translate(2.9, 0.13, -(length * 2) + 2), // thin small right
+    new THREE.BoxGeometry(6, 6, 1).translate(0, 3, 2.5), // back
 
     
     // new THREE.BoxGeometry(4, 4, 4).translate(0, 0.13, 0),
@@ -70,15 +71,9 @@ export function Bounds({ length = 1 }) {
   return (
     <>
       {
-        <RigidBody type='fixed' colliders='trimesh' restitution={0.2} friction={0}>
+        <RigidBody type='fixed' colliders='trimesh'>
           {/* floor */}
-          <mesh
-            geometry={boxGeometry}
-            material={floorMaterial}
-            position={[0, -0.09, -(length * 2) + 2]}
-            scale={[4, 0.2, 4 * length]}
-            receiveShadow
-          />
+          
           <mesh geometry={mergedGeometry} material={wallMaterial} receiveShadow castShadow></mesh>;{/* wall left */}
         </RigidBody>
       }
@@ -91,51 +86,6 @@ const generateRandomRotation = () => [
   (Math.random() - 0.5) * 0.15,
   (Math.random() - 0.5) * 0.15,
 ];
-
-const FlameBox = ({ position, delay }) => {
-  const materialColor = useMemo(() => [Math.random() + 0.8, Math.random() * 0.3, 0], []);
-  const [scale, setScale] = useState([1, 1, 1]);
-  const [currentPosition, setCurrentPosition] = useState(position);
-
-  useFrame(() => {
-    setScale((prevScale) => [
-      prevScale[0] * 0.95, // Increase the scale factor for faster shrinking
-      prevScale[1] * 0.95,
-      prevScale[2] * 0.95,
-    ]);
-
-    // Move upward while getting smaller
-    setCurrentPosition((prevPosition) => [
-      prevPosition[0] * 0.97,
-      prevPosition[1] + 0.006, // Adjust the speed of upward movement
-      prevPosition[2] * 0.97,
-    ]);
-
-    // If the flame box is too small, reset the scale and position
-    if (scale[0] < 0.05) {
-      setScale([0.4, 0.4, 0.4]);
-      setCurrentPosition(position);
-    }
-  });
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setScale([0.4, 0.4, 0.4]);
-      setCurrentPosition(position);
-    }, delay);
-
-    return () => clearTimeout(timeoutId);
-  }, [delay, position]);
-
-  return (
-    <group>
-      <mesh position={currentPosition} scale={scale}>
-        <boxGeometry args={[0.2, 0.2, 0.2]} />
-        <meshStandardMaterial color={materialColor} transparent opacity={1} />
-      </mesh>
-    </group>
-  );
-};
 
 export function FloorTiles({ position = [0, 0, 0], count }) {
   const instancedCylinderMeshRef = useRef();
@@ -155,7 +105,7 @@ export function FloorTiles({ position = [0, 0, 0], count }) {
   useEffect(() => {
     for (let i = 0; i < amountOfTiles; i++) {
       temp.position.set(
-        (Math.random() - 0.5) * 3,
+        (Math.random() - 0.5) * 4.5,
         -0.03 + Math.min(yOffset * i, 0.05),
 
         (Math.random() * (RangeInAxisZ - 2) - RangeInAxisZ) + 2
@@ -170,7 +120,7 @@ export function FloorTiles({ position = [0, 0, 0], count }) {
     // instancedCylinderMeshRef.current.instanceMatrix.needsUpdate = true;
   }, []);
 
-  return <instancedMesh ref={instancedCylinderMeshRef} args={[cylinderGeometry5, wallMaterial, amountOfTiles]} />;
+  return <instancedMesh ref={instancedCylinderMeshRef} args={[cylinderGeometry5, wallMaterial, amountOfTiles]} receiveShadow  />;
 }
 
 const createMatrix = (position, rotation, scale) => {
@@ -220,8 +170,8 @@ export function TorchesGroup({ position = [-1.5, 1, 2], count }) {
 
 
     for (let i = 0; i < torchesPairAmount; i++) {
-      const torchPositionLeft = [-1.8, 1.5, -(i + 1) * 2 * 8 + 10];
-      const torchPositionRight = [1.8, 1.5, -(i + 1) * 2 * 8 + 10];
+      const torchPositionLeft = [-2.8, 1.5, -(i + 1) * 2 * 8 + 10];
+      const torchPositionRight = [2.8, 1.5, -(i + 1) * 2 * 8 + 10];
 
       torchInstances.push({
         key: 'torch-instance-left_' + i,
@@ -364,8 +314,6 @@ export function TorchesGroup({ position = [-1.5, 1, 2], count }) {
 }
 
 useGLTF.preload('/torch.glb');
-useGLTF.preload('/pillar-doubled2.glb');
-
 export function InstancedPillarGroup({ positionZ = 0, count }) {
   const { nodes } = useGLTF('/pillar-doubled2.glb');
   const pillarPairsAmount = count / 2;
@@ -376,14 +324,14 @@ export function InstancedPillarGroup({ positionZ = 0, count }) {
     for (let i = 0; i < pillarPairsAmount; i++) {
       instances.push({
         key: 'pillar-instance-left_' + i,
-        position: [-1.8, 2.62, -(i + 1) * 2 * 4 + 6],
+        position: [-2.7, 2.62, -(i + 1) * 2 * 4 + 6],
         rotation: [0, 0, 0],
         scale: [0.25, 0.14, 0.25],
       });
 
       instances.push({
         key: 'pillar-instance-right_' + i,
-        position: [1.8, 2.62, -(i + 1) * 2 * 4 + 6],
+        position: [2.7, 2.62, -(i + 1) * 2 * 4 + 6],
         rotation: [0, degrees180, 0],
         scale: [0.25, 0.14, 0.25],
       });
@@ -407,6 +355,10 @@ export function InstancedPillarGroup({ positionZ = 0, count }) {
     </InstancedRigidBodies>
   );
 }
+
+
+useGLTF.preload('/pillar-doubled2.glb');
+
 
 export function WallTiles({ position = [0, 0, 0], count }) {
   const tileRef = useRef();
@@ -432,7 +384,7 @@ export function WallTiles({ position = [0, 0, 0], count }) {
     dummy.rotation.y = generateRandomRotation()[1];
     dummy.rotation.z = generateRandomRotation()[2];
 
-    dummy.position.x = Math.random() > 0.5 ? 2.02 : -2.02;
+    dummy.position.x = Math.random() > 0.5 ? 3.02 : -3.02;
     dummy.position.y = heightPositionOfTilesGroup + Math.random() * 3.5 - 1.75;
     dummy.position.z = Math.random() * (RangeInAxisZ + 2) - RangeInAxisZ;
     dummy.updateMatrix();
@@ -441,12 +393,12 @@ export function WallTiles({ position = [0, 0, 0], count }) {
 
   return tileRef.current ? (
     <group position={position}>
-      <primitive castShadow object={tileRef.current} />
+      <primitive castShadow receiveShadow object={tileRef.current} />
     </group>
   ) : null;
 }
 
-const generateRandomShapeGeometry = () => {
+export const generateRandomShapeGeometry = () => {
   const numVertices = Math.floor(Math.random() * (8 - 5 + 1)) + 5;
 
   // Generate random lengths for sides
@@ -455,13 +407,11 @@ const generateRandomShapeGeometry = () => {
   // Generate random angle for rotation
   const rotationAngle = (Math.random() * degrees180) / 2;
 
-  // Generate vertices based on desired side lengths
   const vertices = sideLengths.map((sideLength, index) => {
     const angle = (2 * degrees180 * index) / numVertices + rotationAngle;
     return new THREE.Vector3(Math.cos(angle) * sideLength, Math.sin(angle) * sideLength, 0);
   });
 
-  // Create a shape geometry using the vertices
   const shapeGeometry = new THREE.Shape(vertices);
 
   return shapeGeometry;
@@ -472,7 +422,7 @@ export function RandomShape({
   extrudeSettings = { depth: 0.01, bevelSegments: 1, bevelSize: 1, steps: 1, bevelThickness: 1, bevelOffset: -4 },
 }) {
   const shapeGeometry = useMemo(() => {
-    const randomShape = generateRandomShapeGeometry(); // Replace this with your actual shape generation function
+    const randomShape = generateRandomShapeGeometry();
     return new ExtrudeGeometry(randomShape, extrudeSettings);
   }, [extrudeSettings]);
   return (
@@ -505,13 +455,10 @@ export function BlockWoodSpinner({ position = [0, 0, 0] }) {
 
   return (
     <group position={position} dispose={null}>
-      {/* <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow /> */}
       <RigidBody
         ref={obstacle}
         type='kinematicPosition'
         position={[getRandomSign(), 0.3, getRandomSign()]}
-        restitution={0.2}
-        friction={0}
       >
         <mesh
           castShadow
@@ -581,14 +528,11 @@ export function BlockLimbo({ position = [0, 0, 0] }) {
 
   return (
     <group position={position}>
-      {/* <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow /> */}
       <RigidBody
         colliders={false}
         ref={obstacle}
         type='kinematicPosition'
         position={[0, 5, 0]}
-        restitution={0.2}
-        friction={0}
       >
         <mesh
           geometry={cylinderGeometry5}
@@ -636,24 +580,9 @@ export function BlockAxe({ position = [0, 0, 0] }) {
 
   return (
     <group position={position}>
-      {/* <mesh geometry={boxGeometry} material={floorMaterial} position={[0, -0.1, 0]} scale={[4, 0.2, 4]} receiveShadow /> */}
       <group position={(0, 0, 0)}>
         <RigidBody ref={obstacleWhole} type='kinematicPosition' position={[0, 3.8, 0]}>
-          {/* <group dispose={null} position={[0, 0, 0]}> */}
-          {/* axe blade */}
-          {/* <mesh castShadow receiveShadow geometry={nodes.Cube.geometry} material={shinyMetalMaterial} /> */}
-          {/* </group> */}
-          {/* <group position={[0, 3.1, 0]}>
-            <mesh
-              geometry={cylinderGeometry7}
-              material={woodMaterial}
-              // position={(0, 4, 0)}
-              rotation={[0, Math.PI / 2, 0]}
-              scale={[0.02, 5, 0.05]}
-              castShadow
-              receiveShadow
-            />
-          </group> */}
+
           <group dispose={null}>
             <mesh castShadow receiveShadow geometry={nodes.blade.geometry} material={shinyMetalMaterial} />
             <mesh castShadow receiveShadow geometry={nodes.handle.geometry} material={woodMaterial} />
@@ -666,24 +595,7 @@ export function BlockAxe({ position = [0, 0, 0] }) {
 
 useGLTF.preload('/axe2.glb');
 
-export function BlockEnd({ position = [0, 0, 0] }) {
-  // const hamburger = useGLTF("./hamburger.glb");
-  // hamburger.scene.children.forEach((mesh) => {
-  //   mesh.castShadow = true;
-  // });
-
-  return (
-    <group position={position}>
-      <mesh geometry={boxGeometry} material={floorMaterial} position={[0, 0, 0]} scale={[4, 0.2, 4]} receiveShadow />
-      <RigidBody type='fixed' colliders='hull' position={[0, 0.25, 0]} restitution={0.2} friction={0}>
-        {/* <primitive object={hamburger.scene} scale={0.2} /> */}
-      </RigidBody>
-    </group>
-  );
-}
-
 export function Level({ count = 30, types = [BlockWoodSpinner, BlockAxe, BlockLimbo] }) {
-  // export function Level({ count = 5, types = [BlockLimbo] }) {
   const blocks = useMemo(() => {
     const blocks = [];
 
@@ -693,10 +605,9 @@ export function Level({ count = 30, types = [BlockWoodSpinner, BlockAxe, BlockLi
     }
     return blocks;
   }, [count, types]);
-  // console.log(blocks);
-  // 145 calls 13164 triangles with optyimized code
   return (
     <>
+    <Suspense fallback={null}>
         <InstancedPillarGroup count={count} />
         <FloorTiles count={count} />
 
@@ -705,18 +616,16 @@ export function Level({ count = 30, types = [BlockWoodSpinner, BlockAxe, BlockLi
 
         {blocks.map((Block, index) => (
           <group key={index}>
-            {/* <Block position={[0, 0, -(index + 1) * 4]} /> */}
+            <Block position={[0, 0, -(index + 1) * 4]} /> 
+            {/* when block are commented (so there are no obstacles in game) character just stick in the place, cannot move it */}
 
-            {/* {index % 5 === 0 && <TorchesGroup position={[-1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, 0, 0]} />}
-            {index % 5 === 0 && (
-              <TorchesGroup position={[1.8, 1, -(index + 1) * 4 - 2]} rotation={[0, degrees180, 0]} />
-            )} */}
           </group>
         ))}
 
-        {/* <BlockEnd position={[0, 0, -(count + 1) * 4]} /> */}
+
 
         <Bounds length={count + 2} />
+    </Suspense>
     </>
   );
 }
